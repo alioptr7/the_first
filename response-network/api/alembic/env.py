@@ -26,7 +26,8 @@ db_host = os.getenv("RESPONSE_DB_HOST")
 db_port = os.getenv("RESPONSE_DB_PORT")
 db_name = os.getenv("RESPONSE_DB_NAME")
 
-database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+# The driver is specified as 'postgresql+psycopg' to use the v3 driver
+database_url = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 config.set_main_option('sqlalchemy.url', database_url)
 # --- Custom configuration ends here ---
 
@@ -36,10 +37,10 @@ config.set_main_option('sqlalchemy.url', database_url)
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-# Add your model's MetaData object here for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+from database import Base
+from user import User # Import all your models here
+
+# Add your model's MetaData object here for 'autogenerate' support.
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
-

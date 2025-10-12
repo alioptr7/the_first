@@ -12,7 +12,8 @@ db_host = os.getenv("RESPONSE_DB_HOST", "localhost")
 db_port = os.getenv("RESPONSE_DB_PORT", "5433")
 db_name = os.getenv("RESPONSE_DB_NAME", "response_db")
 
-DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+# The driver is specified as 'postgresql+psycopg' to use the v3 driver
+DATABASE_URL = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 engine = create_engine(DATABASE_URL)
 
