@@ -119,12 +119,11 @@
 ### Request Network Database Schema
 
 ```sql
--- Users Table
+-- Users Table (Read-only replica, synced from Response Network)
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY, -- No default generation, synced from response network
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    hashed_password VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
     profile_type VARCHAR(50) NOT NULL DEFAULT 'basic',
     rate_limit_per_minute INTEGER NOT NULL DEFAULT 10,
@@ -132,17 +131,8 @@ CREATE TABLE users (
     rate_limit_per_day INTEGER NOT NULL DEFAULT 500,
     priority INTEGER NOT NULL DEFAULT 5,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP WITH TIME ZONE,
-    
-    CONSTRAINT check_profile_type CHECK (profile_type IN ('basic', 'premium', 'enterprise', 'admin')),
-    CONSTRAINT check_priority CHECK (priority >= 1 AND priority <= 10)
+    synced_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_profile ON users(profile_type);
-CREATE INDEX idx_users_active ON users(is_active);
 
 -- Requests Table
 CREATE TABLE requests (
@@ -286,6 +276,31 @@ CREATE INDEX idx_apikeys_expires ON api_keys(expires_at);
 ### Response Network Database Schema
 
 ```sql
+-- Users Table (Primary source of truth)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    profile_type VARCHAR(50) NOT NULL DEFAULT 'basic',
+    rate_limit_per_minute INTEGER NOT NULL DEFAULT 10,
+    rate_limit_per_hour INTEGER NOT NULL DEFAULT 100,
+    rate_limit_per_day INTEGER NOT NULL DEFAULT 500,
+    priority INTEGER NOT NULL DEFAULT 5,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT check_profile_type CHECK (profile_type IN ('basic', 'premium', 'enterprise', 'admin')),
+    CONSTRAINT check_priority CHECK (priority >= 1 AND priority <= 10)
+);
+
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_profile ON users(profile_type);
+CREATE INDEX idx_users_active ON users(is_active);
+
 -- Incoming Requests Table (mirrored from Request Network)
 CREATE TABLE incoming_requests (
     id UUID PRIMARY KEY,

@@ -95,12 +95,9 @@
   - تنظیم `alembic.ini`
   - تنظیم `env.py`
 - [ ] ایجاد initial migration
-- [ ] پیاده‌سازی `users` table
-  - UUID primary key
-  - Authentication fields
-  - Profile & rate limiting fields
-  - Indexes
-  - Constraints
+- [ ] پیاده‌سازی `users` table (read-only replica)
+  - UUID primary key (synced)
+  - Fields for rate limiting and user info
 - [ ] پیاده‌سازی `requests` table
   - UUID primary key
   - Foreign key به users
@@ -131,10 +128,16 @@
 
 - [ ] ایجاد Alembic configuration جداگانه
 - [ ] ایجاد initial migration
+- [ ] پیاده‌سازی `users` table (source of truth)
+  - UUID primary key
+  - Authentication fields (password hashing)
+  - Profile & rate limiting fields
+  - Indexes & Constraints
 - [ ] پیاده‌سازی `incoming_requests` table
   - Mirror از requests table
   - بدون foreign key به users (isolated)
 - [ ] پیاده‌سازی `query_results` table
+  - Foreign key to `incoming_requests`
   - Elasticsearch execution metadata
 - [ ] پیاده‌سازی `query_cache` table
   - Cache key indexing
@@ -157,10 +160,10 @@
 - [ ] ایجاد base model با common fields
   - `id`, `created_at`, `updated_at`
   - Mixins برای timestamps
-- [ ] پیاده‌سازی `User` model (Request Network)
+- [ ] پیاده‌سازی `User` model (Response Network)
   - Relationships
   - Password hashing methods
-  - Rate limit check methods
+- [ ] پیاده‌سازی `User` model (Request Network - read-only)
 - [ ] پیاده‌سازی `Request` model
   - Status transitions
   - Query builder methods
