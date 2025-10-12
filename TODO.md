@@ -10,15 +10,14 @@
 ## PHASE 1: راه‌اندازی اولیه و زیرساخت (هفته 1-2)
 
 ### 1.1 راه‌اندازی محیط توسعه
-
-- [ ] نصب Docker و Docker Compose
-- [ ] نصب Python 3.11+ و pip
-- [ ] نصب Node.js 20.x LTS و npm/yarn
-- [ ] نصب PostgreSQL client tools
-- [ ] نصب Redis client tools
-- [ ] تنظیم Git و repository initialization
-- [ ] ایجاد `.gitignore` برای Python, Node.js, Docker
-- [ ] ایجاد `README.md` اولیه
+- [x] نصب Docker و Docker Compose
+- [x] نصب Python 3.11+ و pip
+- [x] نصب Node.js 20.x LTS و npm/yarn
+- [x] نصب PostgreSQL client tools
+- [x] نصب Redis client tools
+- [x] تنظیم Git و repository initialization
+- [x] ایجاد `.gitignore` برای Python, Node.js, Docker
+- [x] ایجاد `README.md` اولیه
 
 **وابستگی‌ها:** هیچ  
 **تخمین زمان:** 4 ساعت  
@@ -27,8 +26,7 @@
 ---
 
 ### 1.2 ساختار پروژه
-
-- [ ] ایجاد directory structure اصلی
+- [x] ایجاد directory structure اصلی
   ```
   pu_project/
   ├── request-network/

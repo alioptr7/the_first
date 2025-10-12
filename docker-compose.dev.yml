@@ -1,0 +1,110 @@
+version: "3.7"
+
+services:
+  # ------------------- Request Network Services -------------------
+  postgres-request:
+    image: postgres:15-alpine
+    container_name: postgres-request-db
+    environment:
+      - POSTGRES_USER=${REQUEST_DB_USER:-user}
+      - POSTGRES_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - POSTGRES_DB=${REQUEST_DB_NAME:-request_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-request-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${REQUEST_DB_USER:-user} -d ${REQUEST_DB_NAME:-request_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-request:
+    image: redis:7-alpine
+    container_name: redis-request
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-request-data:/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ------------------- Response Network Services ------------------
+  postgres-response:
+    image: postgres:15-alpine
+    container_name: postgres-response-db
+    environment:
+      - POSTGRES_USER=${RESPONSE_DB_USER:-user}
+      - POSTGRES_PASSWORD=${RESPONSE_DB_PASSWORD:-password}
+      - POSTGRES_DB=${RESPONSE_DB_NAME:-response_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-response-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RESPONSE_DB_USER:-user} -d ${RESPONSE_DB_NAME:-response_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-response:
+    image: redis:7-alpine
+    container_name: redis-response
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-response-data:/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false # For development only
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g" # Development memory limit
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-request-data:
+  postgres-response-data:
+  redis-request-data:
+  redis-response-data:
+  elasticsearch-data:
+
+networks:
+  app-net:
+    driver: bridge
