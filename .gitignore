@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Python virtualenv
+.venv/
+venv/
+ENV/
+
+# Environment variables
+.env
+.env.*
+!/.env.example
+
+# Node.js
+node_modules/
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+data/
+logs/
+
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store
