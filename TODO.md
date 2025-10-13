@@ -108,11 +108,11 @@
   - [x] One-to-one relation با requests
   - [x] JSONB result data
   - [x] Cache fields
-- [ ] پیاده‌سازی `export_batches` table
-- [ ] پیاده‌سازی `import_batches` table
-- [ ] پیاده‌سازی `audit_logs` table
-- [ ] پیاده‌سازی `api_keys` table
-- [ ] اجرای migrations و تست
+- [x] پیاده‌سازی `export_batches` table
+- [x] پیاده‌سازی `import_batches` table
+- [x] پیاده‌سازی `audit_logs` table
+- [x] پیاده‌سازی `api_keys` table
+- [x] اجرای migrations و تست
 - [ ] ایجاد seed data برای development
   - Admin user
   - Test users با profiles مختلف
@@ -126,25 +126,25 @@
 
 ### 2.2 Database Schema - Response Network
 
-- [ ] ایجاد Alembic configuration جداگانه
-- [ ] ایجاد initial migration
-- [ ] پیاده‌سازی `users` table (source of truth)
+- [x] ایجاد Alembic configuration جداگانه
+- [x] ایجاد initial migration
+- [x] پیاده‌سازی `users` table (source of truth)
   - UUID primary key
   - Authentication fields (password hashing)
   - Profile & rate limiting fields
   - Indexes & Constraints
-- [ ] پیاده‌سازی `incoming_requests` table
+- [x] پیاده‌سازی `incoming_requests` table
   - Mirror از requests table
   - بدون foreign key به users (isolated)
-- [ ] پیاده‌سازی `query_results` table
-  - Foreign key to `incoming_requests`
+- [x] پیاده‌سازی `query_results` table
+  - [x] Foreign key to `incoming_requests`
   - Elasticsearch execution metadata
 - [ ] پیاده‌سازی `query_cache` table
   - Cache key indexing
   - TTL fields
   - Hit count tracking
-- [ ] پیاده‌سازی `export_batches` table
-- [ ] پیاده‌سازی `import_batches` table
+- [x] پیاده‌سازی `export_batches` table
+- [x] پیاده‌سازی `import_batches` table
 - [ ] پیاده‌سازی `system_logs` table
 - [ ] اجرای migrations و تست
 - [ ] ایجاد seed data برای development

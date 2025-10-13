@@ -38,7 +38,13 @@ config.set_main_option('sqlalchemy.url', database_url)
 # ... etc.
 
 from database import Base
-from user import User # Import all your models here
+from user import User  # Import all your models here
+from incoming_request import IncomingRequest
+from query_result import QueryResult
+from import_batch import ImportBatch
+from export_batch import ExportBatch
+from query_cache import QueryCache
+from system_log import SystemLog
 
 # Add your model's MetaData object here for 'autogenerate' support.
 target_metadata = Base.metadata
