@@ -90,12 +90,12 @@
 
 ### 2.1 Database Schema - Request Network
 
-- [ ] ایجاد Alembic configuration برای migrations
-  - `alembic init alembic`
-  - تنظیم `alembic.ini`
-  - تنظیم `env.py`
-- [ ] ایجاد initial migration
-- [ ] پیاده‌سازی `users` table (read-only replica)
+- [x] ایجاد Alembic configuration برای migrations
+  - [x] `alembic init alembic`
+  - [x] تنظیم `alembic.ini`
+  - [x] تنظیم `env.py`
+- [x] ایجاد initial migration
+- [x] پیاده‌سازی `users` table (read-only replica)
   - UUID primary key (synced)
   - Fields for rate limiting and user info
 - [ ] پیاده‌سازی `requests` table

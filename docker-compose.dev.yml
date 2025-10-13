@@ -1,10 +1,14 @@
-version: "3.7"
+version: "3.8"
 
 services:
   # ------------------- Request Network Services -------------------
   postgres-request:
     image: postgres:15-alpine
     container_name: postgres-request-db
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=database"
     environment:
       - POSTGRES_USER=${REQUEST_DB_USER:-user}
       - POSTGRES_PASSWORD=${REQUEST_DB_PASSWORD:-password}
@@ -16,7 +20,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${REQUEST_DB_USER:-user} -d ${REQUEST_DB_NAME:-request_db}"]
+      test: ["CMD", "pg_isready", "-U", "${REQUEST_DB_USER:-user}", "-d", "${REQUEST_DB_NAME:-request_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,6 +29,10 @@ services:
   redis-request:
     image: redis:7-alpine
     container_name: redis-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=cache"
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -43,6 +51,10 @@ services:
   postgres-response:
     image: postgres:15-alpine
     container_name: postgres-response-db
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=database"
     environment:
       - POSTGRES_USER=${RESPONSE_DB_USER:-user}
       - POSTGRES_PASSWORD=${RESPONSE_DB_PASSWORD:-password}
@@ -54,7 +66,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RESPONSE_DB_USER:-user} -d ${RESPONSE_DB_NAME:-response_db}"]
+      test: ["CMD", "pg_isready", "-U", "${RESPONSE_DB_USER:-user}", "-d", "${RESPONSE_DB_NAME:-response_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,6 +75,10 @@ services:
   redis-response:
     image: redis:7-alpine
     container_name: redis-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=cache"
     command: redis-server --appendonly yes
     ports:
       - "6380:6379"
@@ -80,6 +96,10 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: elasticsearch
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=search"
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false # For development only
@@ -99,11 +119,11 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres-request-data:
-  postgres-response-data:
-  redis-request-data:
-  redis-response-data:
-  elasticsearch-data:
+  postgres-request-data: {}
+  postgres-response-data: {}
+  redis-request-data: {}
+  redis-response-data: {}
+  elasticsearch-data: {}
 
 networks:
   app-net:
