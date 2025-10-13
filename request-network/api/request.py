@@ -24,3 +24,4 @@ class Request(Base):
     meta = Column(JSONB, nullable=True)
 
     user = relationship("User")
+    response = relationship("Response", back_populates="request", uselist=False, cascade="all, delete-orphan")
