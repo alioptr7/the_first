@@ -98,7 +98,7 @@
 - [x] پیاده‌سازی `users` table (read-only replica)
   - UUID primary key (synced)
   - Fields for rate limiting and user info
-- [ ] پیاده‌سازی `requests` table
+- [x] پیاده‌سازی `requests` table
   - UUID primary key
   - Foreign key به users
   - JSONB fields
