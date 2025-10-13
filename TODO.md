@@ -104,10 +104,10 @@
   - JSONB fields
   - Status field با enum
   - Indexes برای performance
-- [ ] پیاده‌سازی `responses` table
-  - One-to-one relation با requests
-  - JSONB result data
-  - Cache fields
+- [x] پیاده‌سازی `responses` table
+  - [x] One-to-one relation با requests
+  - [x] JSONB result data
+  - [x] Cache fields
 - [ ] پیاده‌سازی `export_batches` table
 - [ ] پیاده‌سازی `import_batches` table
 - [ ] پیاده‌سازی `audit_logs` table
