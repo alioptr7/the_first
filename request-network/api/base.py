@@ -1,17 +1,14 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
+from sqlalchemy.orm import DeclarativeBase
 
-from database import Base
-
-
-class BaseMixin:
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+from .base_class import Base
 
 
-class BaseModel(Base, BaseMixin):
+class BaseModel(Base):
     __abstract__ = True
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # created_at and updated_at will be added to the User model directly
+    # as they have specific logic (synced_at)
