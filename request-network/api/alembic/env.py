@@ -27,6 +27,8 @@ from request import Request
 from response import Response
 from export_batch import ExportBatch
 from import_batch import ImportBatch
+from audit_log import AuditLog
+from api_key import APIKey
 
 config.set_main_option('sqlalchemy.url', DATABASE_URL)
 # --- Custom configuration ends here ---
