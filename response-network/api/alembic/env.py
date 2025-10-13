@@ -18,6 +18,11 @@ if config.config_file_name is not None:
 # --- Custom configuration starts here ---
 from dotenv import load_dotenv
 
+# This is the correct way to handle imports for a flat structure.
+# We ensure alembic knows where to find our modules by adding the parent dir.
+import sys
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
+
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 db_user = os.getenv("RESPONSE_DB_USER")
@@ -42,7 +47,7 @@ from user import User  # Import all your models here
 from incoming_request import IncomingRequest
 from query_result import QueryResult
 from import_batch import ImportBatch
-from export_batch import ExportBatch
+from export_batch import ExportBatch # Ensure this line is NOT commented out
 from query_cache import QueryCache
 from system_log import SystemLog
 

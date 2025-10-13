@@ -1,5 +1,5 @@
-from sqlalchemy import String, Integer, Column, JSONB
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, Integer, Column
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from base import BaseModel
 
