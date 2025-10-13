@@ -22,7 +22,8 @@ import sys
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database import DATABASE_URL, Base
-from user import User # Import all your models here
+from user import User  # Import all your models here
+from request import Request
 
 config.set_main_option('sqlalchemy.url', DATABASE_URL)
 # --- Custom configuration ends here ---
