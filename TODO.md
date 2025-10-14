@@ -140,9 +140,6 @@
   - [x] Foreign key to `incoming_requests`
   - Elasticsearch execution metadata
 - [ ] پیاده‌سازی `query_cache` table
-  - Cache key indexing
-  - TTL fields
-  - Hit count tracking
 - [x] پیاده‌سازی `export_batches` table (مجدداً بررسی و تایید شد)
 - [x] پیاده‌سازی `import_batches` table (مجدداً بررسی و تایید شد)
 - [x] پیاده‌سازی `system_logs` table
@@ -175,7 +172,6 @@
 - [ ] پیاده‌سازی models برای Response Network
   - `IncomingRequest`
   - `QueryResult`
-  - `QueryCache`
   - `SystemLog`
 - [ ] نوشتن unit tests برای models
   - CRUD operations
@@ -770,17 +766,15 @@
        ```python
        cache_key = f"es:{index}:{hash(query)}:{size}:{from}"
        ```
-    5. Check cache (Redis first, then PostgreSQL):
+    5. Check cache (Redis):
        - If cache hit:
          - Return cached result
-         - Update hit_count
        - If cache miss:
          - Build Elasticsearch query
          - Validate query
          - Execute query
          - Store result در database
          - Cache در Redis (TTL based on query type)
-         - Cache در PostgreSQL query_cache table
     6. Update incoming_requests:
        - status = 'completed'
        - completed_at = now()
@@ -844,16 +838,10 @@
 - [ ] Task `maintain_cache()`:
   - Schedule: هر ساعت
   - Clean expired cache entries:
-    - Redis: TTL-based (automatic)
-    - PostgreSQL: DELETE WHERE expires_at < NOW()
+    - Redis: TTL-based (automatic, but can be monitored)
   - Update statistics:
-    - Top queries by hit_count
     - Cache size monitoring
-  - Identify hot queries:
-    - Queries با hit_count > threshold
-    - Pre-cache popular queries
   - Log cache metrics:
-    - Total entries
     - Hit ratio
     - Memory usage
 - [ ] نوشتن tests

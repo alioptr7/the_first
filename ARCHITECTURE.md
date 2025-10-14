@@ -386,25 +386,6 @@ CREATE TABLE import_batches (
     metadata JSONB
 );
 
--- Query Cache Table (for frequently accessed queries)
-CREATE TABLE query_cache (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cache_key VARCHAR(255) UNIQUE NOT NULL,
-    query_hash VARCHAR(64) NOT NULL,
-    query_params JSONB NOT NULL,
-    result_data JSONB,
-    result_count INTEGER,
-    hit_count INTEGER DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_accessed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP WITH TIME ZONE,
-    metadata JSONB
-);
-
-CREATE INDEX idx_cache_key ON query_cache(cache_key);
-CREATE INDEX idx_cache_hash ON query_cache(query_hash);
-CREATE INDEX idx_cache_expires ON query_cache(expires_at);
-
 -- System Logs Table
 CREATE TABLE system_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -578,7 +559,7 @@ Priority: HIGH
 
 Workflow:
 1. Pop request from Redis queue (sorted by priority)
-2. Check cache (Redis + PostgreSQL)
+2. Check cache (Redis)
 3. If cache miss:
    a. Build Elasticsearch query
    b. Execute query
@@ -612,7 +593,6 @@ Priority: LOW
 
 Tasks:
 - Clean expired cache entries
-- Update hit_count statistics
 - Identify hot queries
 - Pre-cache popular queries
 ```
