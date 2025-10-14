@@ -231,12 +231,9 @@
 
 ### 3.3 Shared Schemas (Pydantic)
 
-- [ ] ایجاد `schemas.py` در shared/
-- [ ] Schema برای Request:
 - [x] ایجاد `schemas.py` در shared/
 - [x] Schema برای Request:
   ```python
-  class RequestSchema(BaseModel):
   class RequestTransferSchema(BaseModel):
       id: UUID
       user_id: UUID
@@ -271,12 +268,12 @@
 
 ### 3.3 Logger Configuration
 
-- [ ] پیاده‌سازی `logger.py` با structlog
-- [ ] کلاس `StructuredLogger`:
-  - JSON output format
-  - Contextual logging (request_id, user_id)
-  - Log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-  - File rotation (daily, size-based)
+- [x] پیاده‌سازی `logger.py` با structlog
+- [x] تابع `get_logger`:
+  - [x] JSON output format (برای production)
+  - [x] Console output format (برای development)
+  - [x] Contextual logging (از طریق structlog.contextvars)
+  - [x] Log levels (از طریق logging)
 - [ ] کلاس `AuditLogger`:
   - Database logging برای audit trail
   - Async logging برای performance
@@ -295,20 +292,19 @@
 ## PHASE 4: Request Network - API (هفته 4-5)
 
 ### 4.1 FastAPI Application Setup
-
-- [ ] ایجاد `main.py` در request-network/api/
-- [ ] Setup FastAPI app با configurations
-  - CORS middleware
-  - Exception handlers
-  - Request ID middleware
-  - Logging middleware
-- [ ] Database session dependency
-  - Connection pooling
-  - Transaction management
+- [x] ایجاد `main.py` در request-network/api/
+- [x] Setup FastAPI app با configurations
+  - [x] CORS middleware
+  - [ ] Exception handlers
+  - [x] Request ID middleware
+  - [x] Logging middleware
+- [x] Database session dependency
+  - [x] Connection pooling (handled by SQLAlchemy engine)
+  - [x] Transaction management (handled by session context)
 - [ ] Redis connection dependency
 - [ ] Health check endpoints:
   - `GET /health` - Basic health
-  - `GET /health/ready` - Readiness (با DB check)
+  - [x] `GET /health/ready` - Readiness (با DB check)
   - `GET /health/detailed` - تمام services
 - [ ] OpenAPI documentation configuration
   - Title, description, version

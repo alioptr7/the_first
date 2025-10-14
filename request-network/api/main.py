@@ -1,19 +1,48 @@
-from fastapi import FastAPI, Request
+import sys
+from pathlib import Path
+from fastapi import Depends, FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
-# PYTHONPATH باید شامل ریشه پروژه باشد تا این import کار کند
+# --- Start of Path Fix ---
+# Add project root to the Python path to allow imports from `shared`
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+# --- End of Path Fix ---
+
+from core.config import settings
+from core.middleware import RequestContextMiddleware
+from db.session import get_db_session
 from shared.logger import get_logger
 
-log = get_logger(__name__)
+log = get_logger(__name__, level=settings.LOG_LEVEL)
 
 app = FastAPI(
-    title="Request Network API",
+    title=settings.PROJECT_NAME,
     description="API for submitting and managing requests in the air-gapped system.",
     version="0.1.0",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
+
+# Add Middlewares
+app.add_middleware(RequestContextMiddleware)
+
+# Set all CORS enabled origins
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
 
 @app.on_event("startup")
 async def startup_event():
-    log.info("Application startup...")
+    log.info("Application startup...", api_version=app.version)
 
 @app.get("/")
 async def root():
@@ -21,5 +50,16 @@ async def root():
 
 @app.get("/health", tags=["Monitoring"])
 async def health_check():
-    log.debug("Health check endpoint was hit")
     return {"status": "ok"}
+
+@app.get("/health/ready", tags=["Monitoring"])
+async def readiness_check(db: AsyncSession = Depends(get_db_session)):
+    """
+    Checks if the service is ready to accept traffic (e.g., DB is connected).
+    """
+    try:
+        await db.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        log.error("Readiness check failed: Database connection error.", error=str(e))
+        return {"status": "error", "database": "disconnected"}
