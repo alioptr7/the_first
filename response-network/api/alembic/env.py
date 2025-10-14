@@ -8,8 +8,11 @@ from dotenv import load_dotenv
 
 # --- Path Setup ---
 # This allows Alembic to find your models.
-# Add the project's root directory to the Python path.
-sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+# Add the 'api' directory to the path to find local models.
+api_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, api_dir)
+# Add the project root to the path to find the 'shared' module.
+sys.path.insert(0, os.path.realpath(os.path.join(api_dir, "..", "..")))
 
 # --- Environment Variables ---
 # Load environment variables from a .env file if it exists.
@@ -35,6 +38,11 @@ if config.config_file_name is not None:
 # We will update this later when we create the SQLAlchemy models.
 from shared.database.base import Base
 target_metadata = Base.metadata
+# Import all models here so that Alembic's autogenerate can see them.
+from models.user import User
+from models.incoming_request import IncomingRequest
+from models.query_result import QueryResult
+
 
 
 def get_database_url():
@@ -65,6 +73,7 @@ def run_migrations_offline() -> None:
 
     """
     url = get_database_url()
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,

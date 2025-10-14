@@ -1,23 +1,29 @@
 from sqlalchemy import Boolean, Column, Integer, String, DateTime
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 
-from .database import Base
+from shared.database.base import BaseModel
 
 
-class User(Base):
+class User(BaseModel):
+    """
+    Represents a user in the system. This is the source of truth for user data.
+    """
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    responder_profile = relationship(
-        "Responder",
-        back_populates="user",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=True)
+
+    profile_type = Column(String(50), nullable=False, default='basic', index=True)
+    rate_limit_per_minute = Column(Integer, nullable=False, default=10)
+    rate_limit_per_hour = Column(Integer, nullable=False, default=100)
+    rate_limit_per_day = Column(Integer, nullable=False, default=500)
+
+    priority = Column(Integer, nullable=False, default=5)
+    is_active = Column(Boolean, default=True, index=True)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
+
+    # We will add password hashing and verification methods here later.
