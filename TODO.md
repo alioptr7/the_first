@@ -157,13 +157,13 @@
 
 ### 2.3 SQLAlchemy Models
 
-- [ ] ایجاد base model با common fields
-  - `id`, `created_at`, `updated_at`
-  - Mixins برای timestamps
+- [x] ایجاد base model با common fields
+  - `id` (در هر مدل)
+  - [x] Mixins برای `created_at`, `updated_at`
 - [ ] پیاده‌سازی `User` model (Response Network)
   - Relationships
   - Password hashing methods
-- [ ] پیاده‌سازی `User` model (Request Network - read-only)
+- [x] پیاده‌سازی `User` model (Request Network - read-only)
 - [ ] پیاده‌سازی `Request` model
   - Status transitions
   - Query builder methods
@@ -295,7 +295,7 @@
 - [x] ایجاد `main.py` در request-network/api/
 - [x] Setup FastAPI app با configurations
   - [x] CORS middleware
-  - [ ] Exception handlers
+  - [x] Exception handlers
   - [x] Request ID middleware
   - [x] Logging middleware
 - [x] Database session dependency

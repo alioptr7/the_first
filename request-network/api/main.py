@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -14,6 +14,7 @@ if str(project_root) not in sys.path:
 
 from core.config import settings
 from core.middleware import RequestContextMiddleware
+from core.exceptions import global_exception_handler
 from db.session import get_db_session
 from shared.logger import get_logger
 
@@ -25,6 +26,9 @@ app = FastAPI(
     version="0.1.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
+
+# Add Exception Handlers
+app.add_exception_handler(Exception, global_exception_handler)
 
 # Add Middlewares
 app.add_middleware(RequestContextMiddleware)
