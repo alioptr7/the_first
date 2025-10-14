@@ -143,10 +143,10 @@
   - Cache key indexing
   - TTL fields
   - Hit count tracking
-- [x] پیاده‌سازی `export_batches` table
-- [x] پیاده‌سازی `import_batches` table
-- [ ] پیاده‌سازی `system_logs` table
-- [ ] اجرای migrations و تست
+- [x] پیاده‌سازی `export_batches` table (مجدداً بررسی و تایید شد)
+- [x] پیاده‌سازی `import_batches` table (مجدداً بررسی و تایید شد)
+- [x] پیاده‌سازی `system_logs` table
+- [x] اجرای migrations و تست
 - [ ] ایجاد seed data برای development
 
 **وابستگی‌ها:** 2.1  
@@ -192,25 +192,39 @@
 
 ### 3.1 File Format Handler
 
-- [ ] پیاده‌سازی `file_format.py` در shared/
-- [ ] کلاس `JSONLHandler`:
-  - `write_jsonl()` - نوشتن به فرمت JSONL
-  - `read_jsonl()` - خواندن و parse
-  - `validate_record()` - اعتبارسنجی structure
-  - `stream_read()` - خواندن streaming برای فایل‌های بزرگ
-- [ ] کلاس `BatchMetadata`:
-  - تولید metadata file
-  - Validation metadata
-- [ ] File naming conventions
-  - `generate_filename()` با timestamp و batch_id
-  - `parse_filename()` برای استخراج metadata
-- [ ] نوشتن unit tests
-  - Write/read cycle
-  - Invalid JSON handling
-  - Large batch handling (1000+ records)
+- [x] پیاده‌سازی `file_format_handler.py` در shared/
+- [x] کلاس `JSONLHandler`:
+  - [x] `write_jsonl()` - نوشتن به فرمت JSONL
+  - [x] `read_jsonl()` - خواندن و parse
+  - [ ] `validate_record()` - اعتبارسنجی structure (در فاز بعدی با اسکماها)
+  - [x] `stream_read()` - خواندن streaming برای فایل‌های بزرگ
+- [x] کلاس `BatchMetadata`:
+  - [x] تولید metadata file
+  - [ ] Validation metadata (در فاز بعدی با اسکماها)
+- [x] File naming conventions
+  - [x] `generate_filename()`
+  - [x] `parse_filename()`
+- [x] نوشتن unit tests
+  - [x] `JSONLHandler` (write/read cycle, empty lines)
+  - [x] `BatchMetadata` (creation and write)
+  - [x] `generate_filename` and `parse_filename`
+  - [x] `calculate_checksum`
 
 **وابستگی‌ها:** 1.2  
 **تخمین زمان:** 6 ساعت  
+**اولویت:** 🔴 بالا
+
+---
+
+### 3.2 Encryption Handler
+
+- [ ] ~~پیاده‌سازی `encryption.py` در shared/~~
+- [ ] ~~کلاس `AESCipher` برای رمزنگاری و رمزگشایی~~
+- [ ] ~~مدیریت کلیدها و IV~~
+- [ ] ~~نوشتن unit tests~~
+
+**وضعیت:** **لغو شد** - طبق تصمیم جدید، رمزنگاری فایل‌ها در این فاز پیاده‌سازی نمی‌شود.
+**تخمین زمان:** 0 ساعت  
 **اولویت:** 🔴 بالا
 
 ---
@@ -219,8 +233,11 @@
 
 - [ ] ایجاد `schemas.py` در shared/
 - [ ] Schema برای Request:
+- [x] ایجاد `schemas.py` در shared/
+- [x] Schema برای Request:
   ```python
   class RequestSchema(BaseModel):
+  class RequestTransferSchema(BaseModel):
       id: UUID
       user_id: UUID
       query_type: str
