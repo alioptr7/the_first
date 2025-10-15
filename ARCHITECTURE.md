@@ -124,6 +124,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY, -- No default generation, synced from response network
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL, -- Synced for authentication
     full_name VARCHAR(255),
     profile_type VARCHAR(50) NOT NULL DEFAULT 'basic',
     rate_limit_per_minute INTEGER NOT NULL DEFAULT 10,
@@ -412,7 +413,7 @@ CREATE INDEX idx_logs_request ON system_logs(request_id) WHERE request_id IS NOT
 
 **Request Network API:**
 - JWT Tokens (HS256) با expiry 1 ساعت
-- Refresh Token (expiry 7 روز)
+- Refresh Token (expiry 7 روز) برای تمدید session
 - API Keys برای service-to-service
 - Role-Based Access Control (RBAC)
 

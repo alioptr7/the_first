@@ -1,9 +1,13 @@
 fastapi
 uvicorn[standard]
-pydantic
-pydantic-settings
+sqlalchemy
+asyncpg
+alembic
+psycopg
 python-dotenv
 structlog
-sqlalchemy
-psycopg[binary] # درایور مدرن و غیرهمزمان برای PostgreSQL
-alembic
+python-jose[cryptography]
+passlib[bcrypt]
+
+# For health check
+httpx

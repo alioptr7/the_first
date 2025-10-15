@@ -98,21 +98,21 @@
 - [x] پیاده‌سازی `users` table (read-only replica)
   - UUID primary key (synced)
   - Fields for rate limiting and user info
-- [x] پیاده‌سازی `requests` table
+- [x] پیاده‌سازی `requests` table (Done)
   - UUID primary key
   - Foreign key به users
   - JSONB fields
   - Status field با enum
   - Indexes برای performance
-- [x] پیاده‌سازی `responses` table
+- [x] پیاده‌سازی `responses` table (Done)
   - [x] One-to-one relation با requests
   - [x] JSONB result data
   - [x] Cache fields
-- [x] پیاده‌سازی `export_batches` table
-- [x] پیاده‌سازی `import_batches` table
-- [x] پیاده‌سازی `audit_logs` table
-- [x] پیاده‌سازی `api_keys` table
-- [x] اجرای migrations و تست
+- [x] پیاده‌سازی `export_batches` table (Done)
+- [x] پیاده‌سازی `import_batches` table (Done)
+- [x] پیاده‌سازی `audit_logs` table (Done)
+- [x] پیاده‌سازی `api_keys` table (Done)
+- [x] اجرای migrations و تست (Done)
 - [ ] ایجاد seed data برای development
   - Admin user
   - Test users با profiles مختلف
@@ -144,7 +144,7 @@
 - [x] پیاده‌سازی `import_batches` table (مجدداً بررسی و تایید شد)
 - [x] پیاده‌سازی `system_logs` table
 - [x] اجرای migrations و تست
-- [ ] ایجاد seed data برای development
+- [x] ایجاد seed data برای development
 
 **وابستگی‌ها:** 2.1  
 **تخمین زمان:** 6 ساعت  
@@ -157,9 +157,9 @@
 - [x] ایجاد base model با common fields
   - `id` (در هر مدل)
   - [x] Mixins برای `created_at`, `updated_at`
-- [ ] پیاده‌سازی `User` model (Response Network)
-  - Relationships
-  - Password hashing methods
+- [x] پیاده‌سازی `User` model (Response Network)
+  - [x] Relationships (Implicitly handled by SQLAlchemy base)
+  - [x] Password hashing methods
 - [x] پیاده‌سازی `User` model (Request Network - read-only)
 - [ ] پیاده‌سازی `Request` model
   - Status transitions
@@ -316,18 +316,18 @@
 
 ### 4.2 Authentication System
 
-- [ ] پیاده‌سازی `auth.py` در api/
-- [ ] JWT token generation
-  - Access token (1 hour expiry)
-  - Refresh token (7 days expiry)
-  - Token payload (user_id, role, scopes)
-- [ ] Password hashing با bcrypt
-  - `hash_password()`
-  - `verify_password()`
-- [ ] OAuth2 password bearer scheme
+- [x] پیاده‌سازی ساختار `auth` در api/ (Done)
+- [x] JWT token generation (Done)
+  - [x] Access token (1 hour expiry)
+  - [ ] Refresh token (7 days expiry)
+  - [x] Token payload (user_id, role, scopes)
+- [x] Password hashing با bcrypt
+  - [ ] `hash_password()` (در `response-network` است)
+  - [x] `verify_password()` (به مدل اضافه شد)
+- [x] OAuth2 password bearer scheme (Done)
 - [ ] Dependencies:
-  - `get_current_user()` - از JWT token
-  - `get_current_active_user()` - check is_active
+  - [x] `get_current_user()` - از JWT token (Done)
+  - [x] `get_current_active_user()` - check is_active (Done)
   - `require_role()` - RBAC decorator
 - [ ] API key authentication
   - Header-based: `X-API-Key`
@@ -389,10 +389,8 @@
   - Refresh access token
 - [ ] `POST /auth/logout`:
   - Invalidate refresh token (Redis blacklist)
-- [ ] `GET /users/me`:
-  - Get current user profile
-- [ ] `PUT /users/me`:
-  - Update profile (name, email)
+- [ ] ~~`GET /users/me`~~ (لغو شد - در `request-network` کاربر فقط replica است)
+- [ ] ~~`PUT /users/me`~~ (لغو شد - مدیریت کاربر در `response-network` انجام می‌شود)
 - [ ] `POST /users/me/change-password`:
   - Change password با current password verification
 - [ ] Admin endpoints:
@@ -412,28 +410,28 @@
 
 ### 4.5 Request Submission Endpoints
 
-- [ ] Router `requests.py` در api/routers/
-- [ ] `POST /requests`:
+- [x] Router `requests.py` در api/routers/ (Done)
+- [x] `POST /requests`: (Done)
   - دریافت query parameters
   - Validation با Pydantic schema
   - Rate limit check
   - ذخیره در database با status='pending'
   - Return request_id
-- [ ] `GET /requests`:
+- [x] `GET /requests`: (Done)
   - لیست درخواست‌های کاربر با pagination
   - Filtering by status
   - Sorting by created_at
-- [ ] `GET /requests/{request_id}`:
+- [x] `GET /requests/{request_id}`: (Done)
   - جزئیات درخواست
   - شامل response (اگر موجود باشد)
-- [ ] `GET /requests/{request_id}/status`:
+- [x] `GET /requests/{request_id}/status`: (Done)
   - فقط status درخواست (lightweight)
-- [ ] `DELETE /requests/{request_id}`:
+- [x] `DELETE /requests/{request_id}`: (Done)
   - Cancel request (فقط اگر pending باشد)
-- [ ] Validation logic:
-  - Query type validation
-  - Query params structure validation
-  - Elasticsearch index whitelist
+- [x] Validation logic: (Done)
+  - [x] Query type validation
+  - [x] Query params structure validation
+  - [x] Elasticsearch index whitelist
 - [ ] نوشتن unit tests
 - [ ] Integration tests
 
