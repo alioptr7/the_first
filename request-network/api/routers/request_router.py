@@ -11,12 +11,17 @@ from db.session import get_db_session
 from models.user import User
 from models.request import Request
 from auth.dependencies import get_current_active_user
+from ..rate_limiter import check_rate_limit
 from schemas.request import RequestCreate, RequestPublic, RequestStatus
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
 
-@router.post("/", response_model=RequestPublic, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=RequestPublic,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_rate_limit)])
 async def submit_request(
     request_data: RequestCreate,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -28,8 +33,6 @@ async def submit_request(
     This is the primary endpoint for users to send their queries to the system.
     The request will be saved with a 'pending' status and processed by a background worker.
     """
-    # TODO: Add rate limiting check here before creating the request.
-
     # Perform validation on the incoming data against the user's profile
     validate_request_payload(request_data, current_user)
 
@@ -119,7 +122,11 @@ async def get_request_status(
     return request
 
 
-@router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{request_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(check_rate_limit)]
+)
 async def cancel_request(
     request_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],

@@ -137,9 +137,9 @@
   - Mirror از requests table
   - بدون foreign key به users (isolated)
 - [x] پیاده‌سازی `query_results` table
-  - [x] Foreign key to `incoming_requests`
+  - [x] Foreign key to `incoming_requests` (Done)
   - Elasticsearch execution metadata
-- [ ] پیاده‌سازی `query_cache` table
+- [x] پیاده‌سازی `query_cache` table (Done)
 - [x] پیاده‌سازی `export_batches` table (مجدداً بررسی و تایید شد)
 - [x] پیاده‌سازی `import_batches` table (مجدداً بررسی و تایید شد)
 - [x] پیاده‌سازی `system_logs` table
@@ -161,18 +161,18 @@
   - [x] Relationships (Implicitly handled by SQLAlchemy base)
   - [x] Password hashing methods
 - [x] پیاده‌سازی `User` model (Request Network - read-only)
-- [ ] پیاده‌سازی `Request` model
-  - Status transitions
-  - Query builder methods
-- [ ] پیاده‌سازی `Response` model
-- [ ] پیاده‌سازی `ExportBatch` model
-- [ ] پیاده‌سازی `ImportBatch` model
-- [ ] پیاده‌سازی `AuditLog` model
-- [ ] پیاده‌سازی `APIKey` model
-- [ ] پیاده‌سازی models برای Response Network
-  - `IncomingRequest`
-  - `QueryResult`
-  - `SystemLog`
+- [x] پیاده‌سازی `Request` model (Request Network)
+  - [ ] Status transitions (will be implemented in workers)
+  - [ ] Query builder methods (will be implemented in workers)
+- [x] پیاده‌سازی `Response` model (Request Network)
+- [x] پیاده‌سازی `ExportBatch` model (Both Networks)
+- [x] پیاده‌سازی `ImportBatch` model (Both Networks)
+- [x] پیاده‌سازی `AuditLog` model (Request Network)
+- [x] پیاده‌سازی `APIKey` model (Request Network)
+- [x] پیاده‌سازی models برای Response Network
+  - [x] `IncomingRequest`
+  - [x] `QueryResult`
+  - [x] `SystemLog`
 - [ ] نوشتن unit tests برای models
   - CRUD operations
   - Relationships
@@ -227,8 +227,8 @@
 
 ### 3.3 Shared Schemas (Pydantic)
 
-- [x] ایجاد `schemas.py` در shared/
-- [x] Schema برای Request:
+- [x] ایجاد `shared/schemas/transfer.py`
+- [x] Schema برای Request (برای انتقال داده):
   ```python
   class RequestTransferSchema(BaseModel):
       id: UUID
@@ -238,7 +238,7 @@
       priority: int
       timestamp: datetime
   ```
-- [ ] Schema برای Response:
+- [x] Schema برای Response:
   ```python
   class ResponseSchema(BaseModel):
       request_id: UUID
@@ -246,11 +246,11 @@
       execution_time_ms: int
       timestamp: datetime
   ```
-- [ ] Schema برای Batch:
+- [x] Schema برای Batch:
   - `ExportBatchSchema`
   - `ImportBatchSchema`
   - `BatchMetadataSchema`
-- [ ] Validation rules
+- [x] Validation rules
   - Field constraints
   - Custom validators
 - [ ] Serialization/deserialization helpers
@@ -319,8 +319,8 @@
 - [x] پیاده‌سازی ساختار `auth` در api/ (Done)
 - [x] JWT token generation (Done)
   - [x] Access token (1 hour expiry)
-  - [ ] Refresh token (7 days expiry)
-  - [x] Token payload (user_id, role, scopes)
+  - [ ] ~~Refresh token~~ (لغو شد - نیازی نیست)
+  - [x] Token payload (user_id, scopes)
 - [x] Password hashing با bcrypt
   - [ ] `hash_password()` (در `response-network` است)
   - [x] `verify_password()` (به مدل اضافه شد)
@@ -328,8 +328,8 @@
 - [ ] Dependencies:
   - [x] `get_current_user()` - از JWT token (Done)
   - [x] `get_current_active_user()` - check is_active (Done)
-  - `require_role()` - RBAC decorator
-- [ ] API key authentication
+  - [x] `require_role()` - RBAC decorator (Done)
+- [x] API key authentication (Done)
   - Header-based: `X-API-Key`
   - Validation و rate limiting
 - [ ] نوشتن unit tests
@@ -345,18 +345,18 @@
 
 ### 4.3 Rate Limiting Implementation
 
-- [ ] پیاده‌سازی `rate_limiter.py`
-- [ ] کلاس `RedisRateLimiter`:
-  - Sliding window algorithm
-  - Multiple windows (minute, hour, day)
-  - Per-user limits based on profile
-- [ ] Dependency `check_rate_limit()`:
-  - Check current usage
-  - Increment counter
-  - Return remaining quota in headers
-- [ ] Rate limit exceeded exception
-  - Custom HTTP 429 response
-  - Retry-After header
+- [x] پیاده‌سازی `rate_limiter.py` (Done)
+- [x] کلاس `RateLimiter`: (Done)
+  - [x] Fixed window algorithm (Done)
+  - [x] Multiple windows (minute, hour, day) (Done)
+  - [x] Per-user limits based on profile (Done)
+- [x] Dependency `check_rate_limit()`: (Done)
+  - [x] Check current usage (Done)
+  - [x] Increment counter (Done)
+  - [x] Return remaining quota in headers (Done)
+- [x] Rate limit exceeded exception (Done)
+  - [x] Custom HTTP 429 response (Done)
+  - [x] Retry-After header (Done)
 - [ ] Grace period برای soft limits
   - Warning at 80% usage
   - Block at 100%
@@ -375,32 +375,21 @@
 
 ### 4.4 User Management Endpoints
 
-- [ ] Router `users.py` در api/routers/
-- [ ] `POST /auth/register`:
-  - User registration
-  - Email validation
-  - Password strength check
-  - Return JWT tokens
-- [ ] `POST /auth/login`:
-  - Username/password authentication
-  - Return JWT tokens
-  - Update last_login
-- [ ] `POST /auth/refresh`:
-  - Refresh access token
-- [ ] `POST /auth/logout`:
-  - Invalidate refresh token (Redis blacklist)
+- [x] ایجاد Router برای مدیریت کاربران توسط ادمین (`admin_router.py`) (Done)
+- [x] `POST /auth/login`: (انجام شده در بخش 4.2)
+  - احراز هویت کاربر و صدور توکن دسترسی.
 - [ ] ~~`GET /users/me`~~ (لغو شد - در `request-network` کاربر فقط replica است)
 - [ ] ~~`PUT /users/me`~~ (لغو شد - مدیریت کاربر در `response-network` انجام می‌شود)
-- [ ] `POST /users/me/change-password`:
-  - Change password با current password verification
-- [ ] Admin endpoints:
-  - `GET /admin/users` - لیست کاربران با pagination
-  - `GET /admin/users/{user_id}` - جزئیات کاربر
-  - `PUT /admin/users/{user_id}` - ویرایش کاربر
-  - `POST /admin/users/{user_id}/deactivate` - غیرفعال کردن
-  - `POST /admin/users/{user_id}/activate` - فعال کردن
-- [ ] نوشتن unit tests برای همه endpoints
-- [ ] Integration tests با database
+- [ ] ~~`POST /auth/register`~~ (لغو شد - مدیریت کاربران در `response-network` است)
+- [ ] ~~`POST /auth/refresh`~~ (لغو شد - نیازی به Refresh Token نیست)
+- [ ] ~~`POST /auth/logout`~~ (لغو شد - فعلاً نیازی نیست)
+- [ ] ~~`POST /users/me/change-password`~~ (لغو شد - فعلاً نیازی نیست)
+- [x] پیاده‌سازی Endpoints برای ادمین: (Done)
+  - [x] `GET /admin/users`: لیست تمام کاربران (با pagination و فیلتر). (Done)
+  - [x] `GET /admin/users/{user_id}`: مشاهده جزئیات یک کاربر خاص. (Done)
+  - [x] `POST /admin/users/{user_id}/activate`: فعال کردن یک کاربر (برای دسترسی فوری). (Done)
+  - [x] `POST /admin/users/{user_id}/deactivate`: غیرفعال کردن یک کاربر (برای دسترسی فوری). (Done)
+- [ ] نوشتن unit tests برای endpoints ادمین.
 
 **وابستگی‌ها:** 4.2, 4.3  
 **تخمین زمان:** 8 ساعت  
@@ -478,6 +467,20 @@
   - Random secure string (32 bytes)
   - Prefix برای identification (e.g., "pk_live_...")
   - Hash برای storage (SHA-256)
+- [x] Router `api_keys.py` (Done)
+- [x] `POST /api-keys`: (Done)
+  - [x] Generate new API key (Done)
+  - [x] Specify name و scopes (Done)
+  - [x] Return key (فقط یکبار!) (Done)
+- [x] `GET /api-keys`: (Done)
+  - [x] لیست API keys کاربر (Done)
+  - [x] بدون نمایش actual key (Done)
+- [x] `DELETE /api-keys/{key_id}`: (Done)
+  - [x] Revoke API key (Done)
+- [x] Key generation logic: (Done)
+  - [x] Random secure string (32 bytes) (Done)
+  - [x] Prefix برای identification (e.g., "sk_live_...") (Done)
+  - [x] Hash برای storage (SHA-256) (Done)
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 4.2  

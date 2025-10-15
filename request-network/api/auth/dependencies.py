@@ -1,12 +1,15 @@
+from typing import Annotated, Callable, Sequence
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from ..db.session import get_db_session
+from ..schemas.user import UserSchema
 from ..models.user import User
 from . import security
-from .schemas import TokenData
+
 
 # This tells FastAPI where to go to get a token.
 # The client will send a POST request to this URL with username and password.
@@ -50,3 +53,30 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+# تعریف نوع برای نقش‌ها جهت خوانایی بهتر
+RoleChecker = Callable[[UserSchema], bool]
+
+def require_role(allowed_roles: Sequence[str]) -> RoleChecker:
+    """
+    Factory function that creates a dependency to check user roles.
+    Raises an HTTPException if the user does not have any of the allowed roles.
+    """
+    def role_checker(current_user: Annotated[UserSchema, Depends(get_current_active_user)]) -> UserSchema:
+        # بر اساس معماری، نقش کاربر در profile_type ذخیره می‌شود
+        user_role = getattr(current_user, 'profile_type', 'user')
+        
+        if user_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Operation not permitted for this user role.",
+            )
+        return current_user
+
+    return role_checker
+
+# تعریف وابستگی‌های آماده برای نقش‌های متداول
+require_admin = require_role(["admin"])
+require_operator = require_role(["admin", "operator"])
+require_user = require_role(["admin", "operator", "user", "premium", "enterprise"])
