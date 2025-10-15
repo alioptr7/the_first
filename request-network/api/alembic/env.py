@@ -34,7 +34,7 @@ target_metadata = Base.metadata
 from models.user import User
 from models.request import Request
 from models.response import Response
-from models.batch import ExportBatch, ImportBatch
+from models.batch import ExportBatch, ImportBatch # noqa
 from models.audit_log import AuditLog
 from models.api_key import ApiKey
 

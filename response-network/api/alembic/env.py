@@ -40,8 +40,11 @@ from shared.database.base import Base
 target_metadata = Base.metadata
 # Import all models here so that Alembic's autogenerate can see them.
 from models.user import User
-from models.incoming_request import IncomingRequest
-from models.query_result import QueryResult
+from models.incoming_request import IncomingRequest # noqa
+from models.query_result import QueryResult # noqa
+from models.batch import ExportBatch, ImportBatch # noqa
+from models.query_cache import QueryCache # noqa
+from models.system_log import SystemLog # noqa
 
 
 

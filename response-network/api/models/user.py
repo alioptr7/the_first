@@ -1,6 +1,8 @@
-from sqlalchemy import Boolean, Column, Integer, String, DateTime
+from datetime import datetime
+from sqlalchemy import Boolean, Integer, String, DateTime
 import bcrypt
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from shared.database.base import BaseModel
 
@@ -11,20 +13,18 @@ class User(BaseModel):
     """
     __tablename__ = "users"
 
-    username = Column(String(100), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255), nullable=True)
-
-    profile_type = Column(String(50), nullable=False, default='basic', index=True)
-    rate_limit_per_minute = Column(Integer, nullable=False, default=10)
-    rate_limit_per_hour = Column(Integer, nullable=False, default=100)
-    rate_limit_per_day = Column(Integer, nullable=False, default=500)
-    allowed_indices = Column(JSONB, nullable=False, server_default='["products"]')
-
-    priority = Column(Integer, nullable=False, default=5)
-    is_active = Column(Boolean, default=True, index=True)
-    last_login = Column(DateTime(timezone=True), nullable=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    profile_type: Mapped[str] = mapped_column(String(50), nullable=False, default='basic', index=True)
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    rate_limit_per_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    rate_limit_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=500)
+    allowed_indices: Mapped[list] = mapped_column(JSONB, nullable=False, server_default='["products"]')
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"

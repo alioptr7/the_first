@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 
-from ..schemas.request import RequestCreate
-from ..models.user import User
-from ..schemas.query_params import QUERY_PARAM_SCHEMAS
+from schemas.request import RequestCreate
+from models.user import User
+from schemas.query_params import QUERY_PARAM_SCHEMAS
 
 # --- Whitelists ---
 # These should ideally be loaded from a config file or database.

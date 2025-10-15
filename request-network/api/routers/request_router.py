@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from ..core.validation import validate_request_payload
-from ..db.session import get_db_session
-from ..models.user import User
-from ..models.request import Request
-from ..auth.dependencies import get_current_active_user
-from ..schemas.request import RequestCreate, RequestPublic, RequestStatus
+from core.validation import validate_request_payload
+from db.session import get_db_session
+from models.user import User
+from models.request import Request
+from auth.dependencies import get_current_active_user
+from schemas.request import RequestCreate, RequestPublic, RequestStatus
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 

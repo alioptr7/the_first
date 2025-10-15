@@ -1,33 +1,26 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    ForeignKey,
-    DateTime,
-)
+import uuid
+from datetime import datetime
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from shared.database.base import BaseModel
+from .incoming_request import IncomingRequest
 
 
 class QueryResult(BaseModel):
-    """
-    Stores the result of a processed IncomingRequest.
-    """
     __tablename__ = "query_results"
 
-    incoming_request_id = Column(UUID(as_uuid=True), ForeignKey("incoming_requests.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-    original_request_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("incoming_requests.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    original_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    result_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    execution_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    elasticsearch_took_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    exported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    export_batch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    result_data = Column(JSONB, nullable=True)
-    execution_time_ms = Column(Integer, nullable=True)
-    cache_hit = Column(Boolean, default=False, nullable=False)
-    exported_at = Column(DateTime(timezone=True), nullable=True)
-    export_batch_id = Column(UUID(as_uuid=True), nullable=True, index=True)
-
-    # Relationship back to the request
-    incoming_request = relationship("IncomingRequest", back_populates="query_result")
-
-    def __repr__(self):
-        return f"<QueryResult(id={self.id}, request_id='{self.incoming_request_id}', cache_hit={self.cache_hit})>"
+    request: Mapped["IncomingRequest"] = relationship("IncomingRequest", back_populates="result")
