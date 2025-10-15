@@ -522,23 +522,22 @@
 ## PHASE 5: Request Network - Workers (هفته 5-6)
 
 ### 5.1 Celery Setup
-
-- [ ] ایجاد `celery_app.py` در request-network/workers/
-- [ ] Celery configuration:
-  - Broker: Redis
-  - Backend: Redis
-  - Serializer: JSON
-  - Task routes
-  - Rate limits
-- [ ] ایجاد `config.py` برای worker settings
-- [ ] Beat scheduler configuration
-  - Schedule definitions
+- [x] ایجاد `celery_app.py` در request-network/workers/
+- [x] Celery configuration:
+  - [x] Broker: Redis
+  - [x] Backend: Redis
+  - [x] Serializer: JSON
+  - [ ] Task routes (در آینده اضافه می‌شود)
+  - [ ] Rate limits (در آینده اضافه می‌شود)
+- [x] ایجاد `config.py` برای worker settings
+- [x] Beat scheduler configuration
+  - [x] Schedule definitions
 - [ ] Task base class با logging
 - [ ] Error handling و retries
   - Exponential backoff
   - Max retries: 3
 - [ ] Dead letter queue برای failed tasks
-- [ ] تست connection به Redis
+- [x] تست connection به Redis (از طریق broker/backend URL)
 - [ ] Setup Flower برای monitoring (port 5555)
 
 **وابستگی‌ها:** 1.3  
@@ -547,36 +546,39 @@
 
 ---
 
+
+
+
 ### 5.2 Export Requests Task
 
-- [ ] ایجاد `tasks/export_requests.py`
-- [ ] Task `export_pending_requests()`:
-  - Schedule: هر 2 دقیقه (via Celery Beat)
-  - Query pending requests از database:
+- [x] ایجاد `tasks/export_requests.py`
+- [x] Task `export_pending_requests()`:
+  - [x] Schedule: هر 2 دقیقه (via Celery Beat)
+  - [x] Query pending requests از database:
     ```sql
     SELECT * FROM requests
     WHERE status = 'pending'
     ORDER BY priority DESC, created_at ASC
     LIMIT 500
     ```
-  - Generate batch_id (UUID)
-  - تبدیل به JSONL format
-  - Calculate checksum (SHA-256)
-  - Save to /export/ directory
-  - Update requests status به 'exported'
-  - Create export_batch record
-  - Generate metadata file
-- [ ] Error handling:
-  - Database errors
-  - File I/O errors
-  - Encryption errors
-  - Rollback on failure
-- [ ] Logging:
-  - Start/end timestamps
-  - Record count
-  - File size
-  - Errors
-- [ ] Metrics:
+  - [x] Generate batch_id (UUID)
+  - [x] تبدیل به JSONL format
+  - [x] Calculate checksum (SHA-256)
+  - [x] Save to /export/ directory
+  - [x] Update requests status به 'exported'
+  - [x] Create export_batch record
+  - [ ] Generate metadata file (در `BatchMetadata` پیاده‌سازی شده، اما فراخوانی مستقیم آن در تسک بعدی اضافه می‌شود)
+- [x] Error handling:
+  - [x] Database errors (با `db_session_scope`)
+  - [ ] File I/O errors (در آینده بهبود می‌یابد)
+  - [ ] Encryption errors (فعلا لغو شده)
+  - [x] Rollback on failure (با `db_session_scope`)
+- [x] Logging:
+  - [x] Start/end timestamps (توسط Celery لاگ می‌شود)
+  - [x] Record count
+  - [x] File size
+  - [ ] Errors (در آینده بهبود می‌یابد)
+- [ ] Metrics (در فاز مانیتورینگ اضافه می‌شود):
   - Export duration
   - Batch size
   - Success/failure rate
@@ -594,32 +596,32 @@
 
 ### 5.3 Import Results Task
 
-- [ ] ایجاد `tasks/import_results.py`
-- [ ] Task `import_response_files()`:
-  - Schedule: هر 30 ثانیه (polling)
-  - Scan /import/ directory
-  - For each `.jsonl.enc` file:
-    - Check if already processed (by checksum)
-    - Validate metadata file
-    - Verify checksum
-    - Parse JSONL
-    - Validate each record
-    - Begin transaction:
-      - Insert into responses table
-      - Update requests status به 'completed'
-      - Update result_received_at
-      - Cache در Redis
-      - Create import_batch record
-    - Commit transaction
-    - Move file to /import/archive/
-    - Delete original file
-- [ ] Error handling:
-  - Corrupted file → move to /import/failed/
-  - Duplicate → skip با log
-  - Parse error → log و continue با next record
-  - Database error → rollback و retry
-- [ ] Logging کامل
-- [ ] Metrics
+- [x] ایجاد `tasks/import_results.py`
+- [x] Task `import_response_files()`:
+  - [x] Schedule: هر 30 ثانیه (polling)
+  - [x] Scan /import/ directory
+  - [x] For each `.jsonl` file:
+    - [x] Check if already processed (by checksum)
+    - [ ] Validate metadata file (در آینده اضافه می‌شود)
+    - [x] Verify checksum (به عنوان بخشی از چک کردن تکراری)
+    - [x] Parse JSONL
+    - [x] Validate each record
+    - [x] Begin transaction:
+      - [x] Insert into responses table
+      - [x] Update requests status به 'completed'
+      - [x] Update result_received_at
+      - [ ] Cache در Redis (در فاز بعدی)
+      - [x] Create import_batch record
+    - [x] Commit transaction
+    - [x] Move file to /import/archive/
+    - [x] Delete original file (بخشی از عملیات move)
+- [x] Error handling:
+  - [x] Corrupted file → move to /import/failed/
+  - [x] Duplicate → skip با log و آرشیو
+  - [x] Parse error → log و انتقال به failed
+  - [x] Database error → rollback و retry (با Celery)
+- [x] Logging کامل
+- [ ] Metrics (در فاز مانیتورینگ)
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 3.1, 5.1
@@ -677,16 +679,16 @@
 
 ### 6.1 Celery Setup (Response Network)
 
-- [ ] ایجاد `celery_app.py` در response-network/workers/
-- [ ] Configuration مشابه Request Network
-- [ ] Task routing:
-  - `import_queue` - high priority
-  - `query_queue` - با priority levels
-  - `export_queue` - medium priority
-- [ ] Worker pool configuration:
-  - 8 workers (configurable)
-  - Concurrency settings
-- [ ] Setup Flower
+- [x] ایجاد `celery_app.py` در response-network/workers/
+- [x] Configuration مشابه Request Network
+- [ ] Task routing: (در فازهای بعدی پیاده‌سازی می‌شود)
+  - [ ] `import_queue` - high priority
+  - [ ] `query_queue` - با priority levels
+  - [ ] `export_queue` - medium priority
+- [ ] Worker pool configuration: (در `docker-compose.prod.yml` تعریف خواهد شد)
+  - [ ] 8 workers (configurable)
+  - [ ] Concurrency settings
+- [ ] Setup Flower (در فازهای بعدی اضافه می‌شود)
 
 **وابستگی‌ها:** 1.3  
 **تخمین زمان:** 3 ساعت  
@@ -696,26 +698,26 @@
 
 ### 6.2 Elasticsearch Client
 
-- [ ] ایجاد `elasticsearch_client.py`
-- [ ] کلاس `ElasticsearchClient`:
-  - Connection management
-  - Connection pooling
-  - Health check
-  - Retry logic
-- [ ] Query methods:
-  - `execute_query()` - main method
-  - `validate_query()` - قبل از اجرا
-  - `build_query()` - از params به ES query
-- [ ] Security:
-  - Read-only user credentials
-  - Index whitelist validation
-  - Query timeout: 30 seconds
-  - Result size limit: 1000
-- [ ] Error handling:
-  - Connection errors
-  - Timeout errors
-  - Query syntax errors
-- [ ] Logging
+- [x] ایجاد `elasticsearch_client.py`
+- [x] کلاس `ElasticsearchClient`:
+  - [x] Connection management
+  - [x] Connection pooling (handled by the client library)
+  - [x] Health check
+  - [x] Retry logic (handled by the client library)
+- [x] Query methods:
+  - [x] `execute_query()` - main method
+  - [x] `validate_query()` - قبل از اجرا
+  - [x] `build_es_query()` - از params به ES query
+- [x] Security:
+  - [ ] Read-only user credentials (TODO for production)
+  - [ ] Index whitelist validation (TODO, placeholder added)
+  - [x] Query timeout: 30 seconds (from config)
+  - [x] Result size limit: 1000 (from config)
+- [x] Error handling:
+  - [x] Connection errors
+  - [x] Timeout errors (handled by retry)
+  - [x] Query syntax errors (via `TransportError`)
+- [x] Logging
 - [ ] نوشتن unit tests با mock
 - [ ] Integration tests با real Elasticsearch
 
@@ -727,25 +729,25 @@
 
 ### 6.3 Import Requests Task
 
-- [ ] ایجاد `tasks/import_requests.py`
-- [ ] Task `import_request_files()`:
-  - Schedule: هر 30 ثانیه
-  - Scan /import/ directory
-  - For each file:
-    - Validate checksum
-    - Parse requests
-    - Check duplicates (by original_request_id)
-    - Begin transaction:
-      - Insert into incoming_requests
-      - Create import_batch record
-    - Commit
-    - برای هر request:
-      - Push to Redis queue با priority
-      - Queue key: `query_queue:{priority}`
-    - Archive file
-- [ ] Error handling
-- [ ] Logging
-- [ ] Metrics
+- [x] ایجاد `tasks/import_requests.py`
+- [x] Task `import_request_files()`:
+  - [x] Schedule: هر 30 ثانیه
+  - [x] Scan /import/ directory
+  - [x] For each file:
+    - [x] Validate checksum
+    - [x] Parse requests
+    - [x] Check duplicates (by checksum)
+    - [x] Begin transaction:
+      - [x] Insert into incoming_requests
+      - [x] Create import_batch record
+    - [x] Commit
+    - [x] برای هر request:
+      - [x] Push to Celery queue با priority
+      - [x] `execute_query_task.apply_async(args=[...], priority=...)`
+    - [x] Archive file
+- [x] Error handling (basic try/except, move to failed)
+- [x] Logging
+- [ ] Metrics (در فاز مانیتورینگ)
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 3.1, 3.2, 6.1  
@@ -756,42 +758,42 @@
 
 ### 6.4 Query Executor Task
 
-- [ ] ایجاد `tasks/query_executor.py`
-- [ ] Task `execute_query()`:
-  - Triggered: از Redis queue (continuous)
-  - برای هر request:
-    1. Pop from queue (by priority)
-    2. Load request از database
-    3. Update status به 'processing'
-    4. Generate cache key:
+- [x] ایجاد `tasks/query_executor.py`
+- [x] Task `execute_query_task()`:
+  - [x] Triggered: از `import_requests` (via Celery)
+  - [x] برای هر request:
+    1. [x] Pop from queue (توسط Celery worker)
+    2. [x] Load request از database
+    3. [x] Update status به 'processing'
+    4. [x] Generate cache key:
        ```python
        cache_key = f"es:{index}:{hash(query)}:{size}:{from}"
        ```
-    5. Check cache (Redis):
-       - If cache hit:
-         - Return cached result
-       - If cache miss:
-         - Build Elasticsearch query
-         - Validate query
-         - Execute query
-         - Store result در database
-         - Cache در Redis (TTL based on query type)
-    6. Update incoming_requests:
-       - status = 'completed'
-       - completed_at = now()
-    7. Insert into query_results:
-       - result_data
-       - execution_time_ms
-       - cache_hit boolean
-- [ ] Error handling:
-  - Elasticsearch errors → status='failed'
-  - Timeout → retry (max 3 times)
-  - Query syntax error → status='failed' (no retry)
-- [ ] Logging کامل
-- [ ] Metrics:
-  - Query duration
-  - Cache hit ratio
-  - Success/failure rate
+    5. [x] Check cache (Redis):
+       - [x] If cache hit:
+         - [x] Return cached result
+       - [x] If cache miss:
+         - [x] Build Elasticsearch query
+         - [x] Validate query (توسط ES client)
+         - [x] Execute query
+         - [x] Store result در database (در مرحله ۷)
+         - [x] Cache در Redis (با TTL)
+    6. [x] Update incoming_requests:
+       - [x] status = 'completed'
+       - [x] completed_at = now()
+    7. [x] Insert into query_results:
+       - [x] result_data
+       - [x] execution_time_ms
+       - [x] cache_hit boolean
+- [x] Error handling:
+  - [x] Elasticsearch errors → status='failed'
+  - [x] Timeout → retry (توسط Celery)
+  - [x] Query syntax error → status='failed' (no retry)
+- [x] Logging کامل
+- [ ] Metrics: (در فاز مانیتورینگ)
+  - [ ] Query duration
+  - [ ] Cache hit ratio
+  - [ ] Success/failure rate
 - [ ] نوشتن unit tests
 - [ ] Integration tests
 
@@ -803,28 +805,28 @@
 
 ### 6.5 Export Results Task
 
-- [ ] ایجاد `tasks/export_results.py`
-- [ ] Task `export_completed_results()`:
-  - Schedule: هر 2 دقیقه
-  - Query completed results (not exported):
+- [x] ایجاد `tasks/export_results.py`
+- [x] Task `export_completed_results()`:
+  - [x] Schedule: هر 2 دقیقه
+  - [x] Query completed results (not exported):
     ```sql
     SELECT * FROM query_results
     WHERE exported_at IS NULL
     ORDER BY executed_at ASC
     LIMIT 500
     ```
-  - Generate JSONL:
+  - [x] Generate JSONL:
     ```json
     {"request_id": "uuid", "result_data": {...}, "execution_time_ms": 123}
     ```
-  - Calculate checksum
-  - Save to /export/
-  - Update exported_at timestamp
-  - Create export_batch record
-  - Generate metadata
-- [ ] Error handling
-- [ ] Logging
-- [ ] Metrics
+  - [x] Calculate checksum
+  - [x] Save to /export/
+  - [x] Update exported_at timestamp
+  - [x] Create export_batch record
+  - [ ] Generate metadata (در آینده اضافه می‌شود)
+- [x] Error handling (basic, via `db_session_scope`)
+- [x] Logging
+- [ ] Metrics (در فاز مانیتورینگ)
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 3.1, 6.1
@@ -835,16 +837,16 @@
 
 ### 6.6 Cache Maintenance Task
 
-- [ ] ایجاد `tasks/cache_maintenance.py`
-- [ ] Task `maintain_cache()`:
-  - Schedule: هر ساعت
-  - Clean expired cache entries:
-    - Redis: TTL-based (automatic, but can be monitored)
-  - Update statistics:
-    - Cache size monitoring
-  - Log cache metrics:
-    - Hit ratio
-    - Memory usage
+- [x] ایجاد `tasks/cache_maintenance.py`
+- [x] Task `maintain_cache()`:
+  - [x] Schedule: هر ساعت
+  - [x] Clean expired cache entries:
+    - [x] Redis: TTL-based (automatic, but can be monitored)
+  - [x] Update statistics:
+    - [x] Cache size monitoring (via logging)
+  - [x] Log cache metrics:
+    - [ ] Hit ratio (نیاز به مکانیزم جداگانه دارد، در آینده اضافه می‌شود)
+    - [x] Memory usage
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 6.1  
@@ -855,19 +857,19 @@
 
 ### 6.7 System Monitoring Task
 
-- [ ] ایجاد `tasks/monitoring.py`
-- [ ] Task `system_health_check()`:
-  - Schedule: هر 5 دقیقه
-  - Check services:
-    - PostgreSQL connection
-    - Redis connection
-    - Elasticsearch cluster health
-  - Check resources:
-    - Disk space (> 80% alert)
-    - Memory usage (> 90% alert)
-    - Queue backlog (> 1000 alert)
-  - Log metrics to system_logs table
-  - Send alerts (اگر فعال باشد)
+- [x] ایجاد `tasks/system_monitoring.py` (نام فایل)
+- [x] Task `system_health_check()`:
+  - [x] Schedule: هر 5 دقیقه
+  - [x] Check services:
+    - [x] PostgreSQL connection
+    - [x] Redis connection
+    - [x] Elasticsearch cluster health
+  - [ ] Check resources: (در فاز مانیتورینگ پیشرفته با Prometheus اضافه می‌شود)
+    - [ ] Disk space (> 80% alert)
+    - [ ] Memory usage (> 90% alert)
+    - [ ] Queue backlog (> 1000 alert)
+  - [ ] Log metrics to system_logs table (در آینده اضافه می‌شود)
+  - [ ] Send alerts (در آینده اضافه می‌شود)
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 6.1  
@@ -880,19 +882,19 @@
 
 ### 7.1 FastAPI Setup (Monitoring)
 
-- [ ] ایجاد minimal FastAPI app در response-network/api/
-- [ ] Health endpoints:
-  - `GET /health`
-  - `GET /health/detailed`
-- [ ] Read-only endpoints برای monitoring:
-  - `GET /stats/queue` - queue length
-  - `GET /stats/workers` - active workers
-  - `GET /stats/elasticsearch` - cluster health
-  - `GET /stats/cache` - cache metrics
-- [ ] Authentication:
-  - Basic auth یا API key
-  - فقط برای admin
-- [ ] No write operations
+- [x] ایجاد minimal FastAPI app در response-network/api/
+- [x] Health endpoints:
+  - [x] `GET /health`
+  - [x] `GET /health/detailed`
+- [x] Read-only endpoints برای monitoring:
+  - [x] `GET /stats/queues` - queue length
+  - [x] `GET /stats/workers` - active workers
+  - [x] `GET /stats/elasticsearch` - cluster health
+  - [x] `GET /stats/cache` - cache metrics
+- [x] Authentication:
+  - [x] API key (`X-API-Key` header)
+  - [x] فقط برای admin (توسط کلید امن)
+- [x] No write operations
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 6.1  

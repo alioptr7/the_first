@@ -47,6 +47,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # flower-request:
+  #   image: mher/flower
+  #   container_name: flower-request
+  #   profiles: ["request", "all"]
+  #   labels:
+  #     - "project.group=request-network"
+  #     - "project.service=monitoring"
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis-request:6379/0
+  #     - FLOWER_PORT=5555
+  #   ports:
+  #     - "5555:5555" # Request Network Flower on port 5555
+  #   networks:
+  #     - app-net
+  #   depends_on:
+  #     - redis-request
+  #   restart: unless-stopped
+
   # ------------------- Response Network Services ------------------
   postgres-response:
     image: postgres:15-alpine
@@ -117,6 +135,24 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  # flower-response:
+  #   image: mher/flower
+  #   container_name: flower-response
+  #   profiles: ["response", "all"]
+  #   labels:
+  #     - "project.group=response-network"
+  #     - "project.service=monitoring"
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis-response:6379/0
+  #     - FLOWER_PORT=5555
+  #   ports:
+  #     - "5556:5555" # Response Network Flower on port 5556
+  #   networks:
+  #     - app-net
+  #   depends_on:
+  #     - redis-response
+  #   restart: unless-stopped
 
 volumes:
   postgres-request-data: {}
