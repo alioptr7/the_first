@@ -903,34 +903,31 @@
 
 ---
 
-## PHASE 8: Admin Panel - Request Network (هفته 8-9)
+## PHASE 8: Admin Panel - Response Network (هفته 8-9)
 
 ### 8.1 Next.js Setup
 
-- [ ] ایجاد Next.js app در request-network/admin-panel/
-  ```bash
-  npx create-next-app@latest admin-panel --typescript --tailwind --app
-  ```
-- [ ] Project configuration:
-  - TypeScript strict mode
-  - ESLint + Prettier
-  - Path aliases (@/components, @/lib, etc.)
-- [ ] Install dependencies:
-  - shadcn/ui
-  - TanStack Query
-  - Zustand
-  - React Hook Form
-  - Zod
-  - Axios
-  - Lucide icons
-- [ ] Setup theme (light/dark)
-- [ ] Setup layouts:
-  - Main layout با sidebar
-  - Auth layout (centered)
+- [x] انتقال Next.js app به `response-network/admin-panel/`
+- [x] Project configuration:
+  - [x] TypeScript strict mode (by default)
+  - [x] ESLint (by default)
+  - [x] Path aliases (@/components, @/lib/utils)
+- [x] Install dependencies:
+  - [x] shadcn/ui
+  - [x] TanStack Query
+  - [x] Zustand
+  - [x] React Hook Form
+  - [x] Zod
+  - [x] @hookform/resolvers (برای اتصال به Zod)
+  - [x] Axios
+  - [x] Lucide icons
+  - [x] next-themes
+- [x] Setup theme (light/dark)
+- [x] Setup layouts:
+  - [x] Main layout (پایه اولیه با ThemeProvider ایجاد شد)
+  - [x] Auth layout (ایجاد شد)
 - [ ] Create API client:
-  - Axios instance با interceptors
-  - Token management
-  - Error handling
+  - [ ] Axios instance برای اتصال به Monitoring API
 
 **وابستگی‌ها:** هیچ  
 **تخمین زمان:** 4 ساعت  
@@ -941,19 +938,18 @@
 ### 8.2 Authentication Pages
 
 - [ ] صفحه Login (`/login`):
-  - Username/password form
-  - Remember me checkbox
-  - Error handling
-  - Redirect to dashboard پس از login
+  - [ ] Username/password form (UI created)
+  - [ ] Remember me checkbox (UI created)
+  - [ ] اتصال به API برای احراز هویت (در `response-network`)
+  - [ ] Error handling
+  - [ ] Redirect to dashboard
 - [ ] صفحه Register (`/register`):
-  - Registration form
-  - Email verification (optional)
+  - فرم ثبت‌نام برای ایجاد کاربر جدید در `response-network`
 - [ ] Protected routes:
   - Middleware برای check authentication
   - Redirect to /login اگر not authenticated
 - [ ] Token management:
   - Store در localStorage/cookie
-  - Automatic refresh
   - Logout functionality
 - [ ] نوشتن tests (با Playwright/Cypress)
 
@@ -963,50 +959,38 @@
 
 ---
 
-### 8.3 Dashboard Page
+### 8.3 Monitoring Dashboard
 
 - [ ] صفحه Dashboard (`/`):
-  - Stats cards:
-    - Total requests
-    - Completed requests
-    - Pending requests
-    - Failed requests
+  - System stats (از Monitoring API):
+    - Queue length
+    - Active workers
+    - Elasticsearch health
+    - Cache hit ratio
   - Charts:
-    - Requests over time (line chart)
-    - Requests by status (pie chart)
-    - Top users (bar chart)
-  - Recent requests table (last 10)
-  - Quick actions
-- [ ] Real-time updates (optional):
-  - WebSocket یا polling
-  - Auto-refresh هر 30 ثانیه
-- [ ] Responsive design
-- [ ] نوشتن tests
+    - Queries over time
+    - Query execution time
+  - Recent queries table
+  - Alerts/notifications
+- [ ] Real-time updates
 
-**وابستگی‌ها:** 8.2  
-**تخمین زمان:** 8 ساعت  
+**وابستگی‌ها:** 8.2, 7.1  
+**تخمین زمان:** 6 ساعت  
 **اولویت:** 🟡 متوسط
 
 ---
 
-### 8.4 Requests Management Page
+### 8.4 Users Management Page (Admin)
 
-- [ ] صفحه Requests (`/requests`):
-  - Data table با TanStack Table:
-    - Columns: ID, User, Type, Status, Created, Actions
-    - Pagination
-    - Sorting
-    - Filtering by status
-    - Search
-  - Request details modal/drawer:
-    - همه اطلاعات request
-    - Response (اگر available)
-    - Timeline/history
-  - Actions:
-    - View response
-    - Cancel request
-    - Retry (admin only)
-- [ ] Responsive design
+- [ ] صفحه Users (`/admin/users`):
+  - Data table:
+    - مدیریت کامل کاربران (CRUD)
+    - Pagination, sorting, filtering
+  - View user details:
+    - Profile info
+    - Rate limits
+- [ ] Role-based access:
+  - فقط admin ها
 - [ ] نوشتن tests
 
 **وابستگی‌ها:** 8.2  
@@ -1015,23 +999,36 @@
 
 ---
 
-### 8.5 Users Management Page (Admin)
+### 8.5 Requests & Results Page
 
-- [ ] صفحه Users (`/admin/users`):
-  - Data table:
-    - Columns: ID, Username, Email, Profile, Status, Actions
-    - Pagination, sorting, filtering
-  - Add user button → modal/form
-  - Edit user → modal/form
-  - Deactivate/Activate user
-  - View user details:
-    - Profile info
-    - Rate limits
-    - Request history
-    - API keys
-- [ ] Role-based access:
-  - فقط admin ها
-- [ ] نوشتن tests
+- [ ] صفحه Requests (`/requests`):
+  - Data table برای `incoming_requests`
+  - Status monitoring
+  - Details modal
+- [ ] صفحه Results (`/results`):
+  - Data table برای `query_results`
+  - Result preview
+  - Execution details
+  - Cache info
+- [ ] Actions:
+  - Retry failed
+  - View result
+
+**وابستگی‌ها:** 8.2  
+**تخمین زمان:** 8 ساعت  
+**اولویت:** 🔴 بالا
+
+---
+
+### 8.6 System Management Pages
+
+- [ ] صفحه Cache (`/system/cache`):
+  - Cache entries table
+  - Actions: Invalidate cache, Clear all
+- [ ] صفحه Batches (`/system/batches`):
+  - مانیتورینگ export/import batches در `response-network`
+- [ ] صفحه Logs (`/system/logs`):
+  - نمایش `system_logs` با فیلترینگ
 
 **وابستگی‌ها:** 8.2  
 **تخمین زمان:** 8 ساعت  
@@ -1039,60 +1036,7 @@
 
 ---
 
-### 8.6 Export/Import Batches Page
-
-- [ ] صفحه Batches (`/admin/batches`):
-  - Tabs:
-    - Export batches
-    - Import batches
-  - Data table برای هر tab:
-    - Columns: ID, Type, Filename, Records, Status, Created, Actions
-    - Pagination
-  - Batch details modal:
-    - Metadata
-    - File info
-    - Record list (preview)
-    - Error logs (اگر failed)
-  - Actions:
-    - Download batch (اگر available)
-    - Retry failed batch
-    - Delete old batches
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 8.2  
-**تخمین زمان:** 6 ساعت  
-**اولویت:** 🟡 متوسط
-
----
-
-### 8.7 Audit Logs Page
-
-- [ ] صفحه Audit Logs (`/admin/audit`):
-  - Data table:
-    - Columns: Timestamp, User, Action, Resource, IP, Status
-    - Pagination
-    - Filtering:
-      - By user
-      - By action type
-      - By date range
-      - By resource type
-    - Search
-  - Log details modal:
-    - Request data
-    - Response data
-    - Full context
-  - Export logs:
-    - CSV download
-    - Date range selection
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 8.2  
-**تخمین زمان:** 6 ساعت  
-**اولویت:** 🟢 پایین
-
----
-
-### 8.8 Settings Page
+### 8.7 Settings Page
 
 - [ ] صفحه Settings (`/settings`):
   - User settings:
@@ -1111,108 +1055,6 @@
 **وابستگی‌ها:** 8.2  
 **تخمین زمان:** 6 ساعت  
 **اولویت:** 🟡 متوسط
-
----
-
-## PHASE 9: Admin Panel - Response Network (هفته 9)
-
-### 9.1 Next.js Setup
-
-- [ ] ایجاد Next.js app مشابه Request Network
-- [ ] Configuration
-- [ ] Dependencies
-
-**وابستگی‌ها:** هیچ  
-**تخمین زمان:** 2 ساعت  
-**اولویت:** 🟡 متوسط
-
----
-
-### 9.2 Monitoring Dashboard
-
-- [ ] صفحه Dashboard (`/`):
-  - System stats:
-    - Queue length
-    - Active workers
-    - Elasticsearch health
-    - Cache hit ratio
-  - Charts:
-    - Queries over time
-    - Query execution time
-    - Cache performance
-  - Recent queries table
-  - Alerts/notifications
-- [ ] Real-time updates
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 9.1, 7.1  
-**تخمین زمان:** 6 ساعت  
-**اولویت:** 🟡 متوسط
-
----
-
-### 9.3 Incoming Requests Page
-
-- [ ] صفحه Requests (`/requests`):
-  - Data table
-  - Status monitoring
-  - Details modal
-  - Actions:
-    - Retry failed
-    - View result
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 9.1  
-**تخمین زمان:** 6 ساعت  
-**اولویت:** 🟡 متوسط
-
----
-
-### 9.4 Query Results Page
-
-- [ ] صفحه Results (`/results`):
-  - Data table
-  - Result preview
-  - Execution details
-  - Cache info
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 9.1  
-**تخمین زمان:** 4 ساعت  
-**اولویت:** 🟡 متوسط
-
----
-
-### 9.5 Cache Management Page
-
-- [ ] صفحه Cache (`/cache`):
-  - Cache entries table
-  - Hit count statistics
-  - Actions:
-    - Invalidate cache entry
-    - Clear all cache
-    - Pre-cache query
-  - Cache metrics charts
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 9.1  
-**تخمین زمان:** 4 ساعت  
-**اولویت:** 🟢 پایین
-
----
-
-### 9.6 System Logs Page
-
-- [ ] صفحه Logs (`/logs`):
-  - Data table
-  - Filtering
-  - Log level indicators
-  - Error details modal
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 9.1  
-**تخمین زمان:** 4 ساعت  
-**اولویت:** 🟢 پایین
 
 ---
 
@@ -1293,12 +1135,11 @@
 - [ ] Component tests (React Testing Library)
 - [ ] E2E tests (Playwright/Cypress):
   - Login flow
-  - Request submission
   - Admin operations
 - [ ] Visual regression tests (optional)
 - [ ] Accessibility tests
 
-**وابستگی‌ها:** Phase 8, 9  
+**وابستگی‌ها:** Phase 8  
 **تخمین زمان:** 8 ساعت  
 **اولویت:** 🟡 متوسط
 
@@ -1855,16 +1696,15 @@
 | Phase 4 | Request Network API | 37 ساعت |
 | Phase 5 | Request Network Workers | 28 ساعت |
 | Phase 6 | Response Network Workers | 38 ساعت |
-| Phase 7 | Response Network API | 4 ساعت |
-| Phase 8 | Admin Panel (Request) | 52 ساعت |
-| Phase 9 | Admin Panel (Response) | 26 ساعت |
+| Phase 7 | Response Network Monitoring API | 4 ساعت |
+| Phase 8 | Admin Panel (Response Network) | 42 ساعت |
 | Phase 10 | Testing | 40 ساعت |
 | Phase 11 | Documentation | 20 ساعت |
 | Phase 12 | Production Prep | 45 ساعت |
 | Phase 13 | Staging Testing | 22 ساعت |
 | Phase 14 | Production Deploy | 17 ساعت |
 | Phase 15 | Post-Launch | Ongoing |
-| **کل** | | **~377 ساعت** |
+| **کل** | | **~363 ساعت** |
 
 **تخمین با 2 developer:** حدود **8-9 هفته** (full-time)  
 **تخمین با 1 developer:** حدود **12-13 هفته** (full-time)
@@ -1880,7 +1720,7 @@
 - Phase 13, 14: Deployment
 
 ### 🟡 متوسط (Important)
-- Phase 8, 9: Admin panels
+- Phase 8: Admin panel
 - Phase 11: Documentation
 - Monitoring & logging features
 
