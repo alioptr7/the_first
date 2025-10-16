@@ -13,18 +13,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.config import settings
 from db.session import get_db_session
 from dependencies import get_api_key
-from workers.celery_app import celery_app
+from router import auth_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="A read-only API for monitoring the Response Network's health and status.",
+    description="An API for monitoring and managing the Response Network.",
     version="0.1.0",
-    docs_url=None, # Disable Swagger UI for this simple API
-    redoc_url=None,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
+
+# Include routers
+app.include_router(auth_router.router)
 
 @app.on_event("startup")
 async def startup_event():

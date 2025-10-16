@@ -7,14 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from auth import security
-from auth.schemas import Token
+from auth.dependencies import get_current_user
 from db.session import get_db_session
 from models.user import User
+from schemas.user import UserRead
 
 router = APIRouter(prefix="/auth", tags=["Admin Authentication"])
 
 
-@router.post("/login")
+@router.post("/login", summary="Admin Login")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
@@ -56,3 +57,11 @@ async def login_for_access_token(
     )
 
     return {"message": "Login successful"}
+
+
+@router.get("/me", response_model=UserRead, summary="Get Current User")
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get the current logged-in user's details."""
+    return current_user
