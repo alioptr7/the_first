@@ -1,13 +1,18 @@
 import logging
+import sys
+import os
 
 import redis
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .core.config import settings
-from .db.session import get_db_session
-from .dependencies import get_api_key
+# Add the project root to the path to allow absolute imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from core.config import settings
+from db.session import get_db_session
+from dependencies import get_api_key
 from workers.celery_app import celery_app
 
 logging.basicConfig(level=logging.INFO)

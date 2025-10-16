@@ -43,7 +43,6 @@ from models.user import User
 from models.incoming_request import IncomingRequest # noqa
 from models.query_result import QueryResult # noqa
 from models.batch import ExportBatch, ImportBatch # noqa
-from models.query_cache import QueryCache # noqa
 from models.system_log import SystemLog # noqa
 
 

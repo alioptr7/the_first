@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings
-from pydantic import RedisDsn, AnyHttpUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn
 
 
 class Settings(BaseSettings):
@@ -8,8 +8,15 @@ class Settings(BaseSettings):
     """
     PROJECT_NAME: str = "Response Network Workers"
 
+    # --- Database Settings (needed for worker to connect to DB) ---
+    RESPONSE_DB_USER: str
+    RESPONSE_DB_PASSWORD: str
+    RESPONSE_DB_HOST: str
+    RESPONSE_DB_PORT: int
+    RESPONSE_DB_NAME: str
+
     # Redis URL for Celery broker and backend (Response Network specific)
-    REDIS_URL: RedisDsn = "redis://localhost:6380/0"
+    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
 
     # Elasticsearch settings
     ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"
@@ -22,8 +29,10 @@ class Settings(BaseSettings):
     CACHE_MAINTENANCE_SCHEDULE_SECONDS: int = 3600  # 1 hour
     SYSTEM_MONITORING_SCHEDULE_SECONDS: int = 300  # 5 minutes
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"  # Ignore extra fields from .env file
+    )
 
 settings = Settings()

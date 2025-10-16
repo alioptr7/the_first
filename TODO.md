@@ -937,9 +937,9 @@
 
 ### 8.2 Authentication Pages
 
-- [ ] صفحه Login (`/login`):
-  - [ ] Username/password form (UI created)
-  - [ ] Remember me checkbox (UI created)
+- [x] صفحه Login (`/login`):
+  - [x] Username/password form (UI created)
+  - [x] Remember me checkbox (UI created)
   - [ ] اتصال به API برای احراز هویت (در `response-network`)
   - [ ] Error handling
   - [ ] Redirect to dashboard
@@ -948,9 +948,12 @@
 - [ ] Protected routes:
   - Middleware برای check authentication
   - Redirect to /login اگر not authenticated
-- [ ] Token management:
-  - Store در localStorage/cookie
-  - Logout functionality
+- [ ] Token management (JWT):
+  - [x] Set access token in `HttpOnly` cookie (initial implementation)
+  - [ ] Implement short-lived access tokens (e.g., 15 mins)
+  - [ ] Implement refresh tokens (long-lived, stored in `HttpOnly` cookie) for seamless re-authentication
+  - [ ] Implement secure logout endpoint (e.g., clearing cookies)
+  - [ ] Move JWT `SECRET_KEY` from code to configuration file (`.env`)
 - [ ] نوشتن tests (با Playwright/Cypress)
 
 **وابستگی‌ها:** 8.1  

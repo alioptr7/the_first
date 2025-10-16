@@ -1,10 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from ..core.config import settings
+from core.config import settings
 
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    str(settings.DATABASE_URL),
     pool_pre_ping=True,
     echo=False,  # Set to True for debugging SQL queries
 )
