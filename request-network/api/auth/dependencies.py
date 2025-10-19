@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ..db.session import get_db_session
-from ..schemas.user import UserSchema
-from ..models.user import User
-from . import security
+from db.session import get_db_session
+from schemas.user import User as UserSchema
+from models.user import User
+from auth import security
 
 
 # This tells FastAPI where to go to get a token.

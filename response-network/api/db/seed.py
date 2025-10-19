@@ -109,36 +109,39 @@ async def seed_data():
             {
                 "id": str(uuid.uuid4()),
                 "original_request_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
-                "user_id": basic_user_id,
+                "original_user_id": basic_user_id,
                 "query_type": "match",
                 "query_params": '{"field": "content", "query": "hello world"}',
                 "priority": 5,
                 "status": "pending",
+                "original_timestamp": datetime.now(timezone.utc),
             },
             {
                 "id": str(uuid.uuid4()),
                 "original_request_id": "b2c3d4e5-f6a7-8899-0011-bbccddeeff00",
-                "user_id": premium_user_id,
+                "original_user_id": premium_user_id,
                 "query_type": "aggregation",
                 "query_params": '{"type": "terms", "field": "category.keyword"}',
                 "priority": 8,
                 "status": "pending",
+                "original_timestamp": datetime.now(timezone.utc),
             },
             {
                 "id": str(uuid.uuid4()),
                 "original_request_id": "c3d4e5f6-a7b8-9900-1122-ccddeeff0011",
-                "user_id": premium_user_id,
+                "original_user_id": premium_user_id,
                 "query_type": "bool",
                 "query_params": '{"must": [{"match": {"title": "test"}}], "filter": [{"term": {"tags": "urgent"}}]}',
                 "priority": 9,
                 "status": "pending",
+                "original_timestamp": datetime.now(timezone.utc),
             },
         ]
 
         request_insert_stmt = text(
             """
-            INSERT INTO incoming_requests (id, original_request_id, user_id, query_type, query_params, priority, status)
-            VALUES (:id, :original_request_id, :user_id, :query_type, :query_params, :priority, :status)
+            INSERT INTO incoming_requests (id, original_request_id, original_user_id, query_type, query_params, priority, status, original_timestamp)
+            VALUES (:id, :original_request_id, :original_user_id, :query_type, :query_params, :priority, :status, :original_timestamp)
             ON CONFLICT (id) DO NOTHING;
             """
         )

@@ -30,16 +30,22 @@ class Settings(BaseSettings):
 
     # Secret key for API access
     MONITORING_API_KEY: str = "super-secret-monitoring-key"
+    SECRET_KEY: str = "change-this-secret-key"
+    LOG_LEVEL: str = "INFO"
 
     # Redis URL (for Celery stats)
     REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
 
     # Elasticsearch URL for monitoring
     ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"
+    
+    # CORS
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
+        extra = 'ignore'
 
 
 settings = Settings()

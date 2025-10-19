@@ -4,7 +4,7 @@ from sqlalchemy import String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..db.base_class import Base, TimestampMixin
+from db.base_class import Base, TimestampMixin
 
 
 class User(Base, TimestampMixin):

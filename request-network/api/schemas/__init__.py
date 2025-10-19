@@ -1,2 +1,2 @@
 from .user import User
-from .request import Request, RequestCreate
+from .request import RequestPublic, RequestCreate, RequestStatus

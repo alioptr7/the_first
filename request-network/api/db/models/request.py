@@ -3,8 +3,8 @@ from sqlalchemy import String, ForeignKey, Integer, Enum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..db.base_class import Base, TimestampMixin
-from .enums import RequestStatus
+from db.base_class import Base, TimestampMixin
+from db.models.enums import RequestStatus
 
 
 class Request(Base, TimestampMixin):

@@ -9,7 +9,7 @@ from sqlalchemy import text
 # Add project root to the Python path to allow imports from `shared`
 project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+    sys.path.append(str(project_root))  # Use append instead of insert to prioritize local imports
 # --- End of Path Fix ---
 
 from core.config import settings
