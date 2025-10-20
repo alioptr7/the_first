@@ -54,7 +54,7 @@ def get_database_url():
 
     user = os.getenv("RESPONSE_DB_USER", "user")
     password = os.getenv("RESPONSE_DB_PASSWORD", "password")
-    host = os.getenv("RESPONSE_DB_HOST", "localhost")
+    host = os.getenv("RESPONSE_DB_HOST", "127.0.0.1")
     port = os.getenv("RESPONSE_DB_PORT", "5433")
     db_name = os.getenv("RESPONSE_DB_NAME", "response_db")
 

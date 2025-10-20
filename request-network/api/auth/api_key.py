@@ -1,5 +1,6 @@
 import hashlib
 from typing import Annotated
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,8 +51,8 @@ async def get_api_key(
             detail="The user associated with this API Key is inactive.",
         )
 
-    # TODO: در آینده می‌توانیم اینجا last_used_at را آپدیت کنیم
-    # api_key_obj.last_used_at = datetime.utcnow()
-    # await db.commit()
+    # آپدیت زمان آخرین استفاده از کلید
+    api_key_obj.last_used_at = datetime.now(timezone.utc)
+    await db.commit()
 
     return user
