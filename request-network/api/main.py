@@ -16,7 +16,7 @@ from core.config import settings
 from core.middleware import RequestContextMiddleware
 from core.exceptions import global_exception_handler
 from db.session import get_db_session
-from routers import auth_router, request_router, admin_router
+from routers import auth_router, request_router, admin_router # admin_router قبلا برای user management بود، حالا برای ادمین اصلی است
 from shared.logger import get_logger
 
 log = get_logger(__name__, level=settings.LOG_LEVEL)
@@ -46,7 +46,7 @@ if settings.BACKEND_CORS_ORIGINS:
 
 # Include API routers
 app.include_router(auth_router.router)
-app.include_router(request_router.router)
+# app.include_router(request_router.router) # این روتر برای مدیریت کاربران توسط ادمین بود، نامش را تغییر می‌دهیم
 app.include_router(admin_router.router)
 
 

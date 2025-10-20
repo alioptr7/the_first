@@ -1,33 +1,54 @@
 import logging
 import sys
 import os
+from pathlib import Path
 
 import redis
 from fastapi import Depends, FastAPI, HTTPException
+from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Add the project root to the path to allow absolute imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# --- Start of Path Fix ---
+# Add project root to the Python path to allow imports from `shared`
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
+# --- End of Path Fix ---
 
 from core.config import settings
 from db.session import get_db_session
 from dependencies import get_api_key
 from router import auth_router
+from router import stats_router
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="An API for monitoring and managing the Response Network.",
+    description="Monitoring and Admin API for the isolated Response Network.",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
+# Set all CORS enabled origins
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 # Include routers
 app.include_router(auth_router.router)
+app.include_router(stats_router.router)
+
 
 @app.on_event("startup")
 async def startup_event():

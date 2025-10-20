@@ -1,5 +1,5 @@
+import uuid
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class Token(BaseModel):
@@ -8,5 +8,5 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    user_id: str
-    scopes: List[str] = []
+    user_id: uuid.UUID
+    scopes: list[str] = []

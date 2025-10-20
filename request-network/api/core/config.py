@@ -1,44 +1,51 @@
-from typing import List
-from pydantic import AnyHttpUrl, PostgresDsn
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
+from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn, model_validator
+from typing import Optional, Any
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded from environment variables or a .env file.
-    """
-
-    # Application metadata
-    PROJECT_NAME: str = "Request Network API"
+    PROJECT_NAME: str = "Response Network Monitoring API"
     API_V1_STR: str = "/api/v1"
 
-    # Logging configuration
+    # --- Database Settings ---
+    RESPONSE_DB_USER: str = "user"
+    RESPONSE_DB_PASSWORD: str = "password"
+    RESPONSE_DB_HOST: str = "postgres-response"
+    RESPONSE_DB_PORT: int = 5432
+    RESPONSE_DB_NAME: str = "response_db"
+    DATABASE_URL: Optional[PostgresDsn] = None
+
+    @model_validator(mode='before')
+    def assemble_db_connection(cls, v: Any) -> Any:
+        if isinstance(v, dict) and 'DATABASE_URL' not in v:
+            v['DATABASE_URL'] = str(PostgresDsn.build(
+                scheme="postgresql+asyncpg",
+                username=v.get('RESPONSE_DB_USER'),
+                password=v.get('RESPONSE_DB_PASSWORD'),
+                host=v.get('RESPONSE_DB_HOST'),
+                port=int(v.get('RESPONSE_DB_PORT')),
+                path=f"{v.get('RESPONSE_DB_NAME') or ''}",
+            ))
+        return v
+
+    # Secret key for API access
+    MONITORING_API_KEY: str = "super-secret-monitoring-key"
+    SECRET_KEY: str = "change-this-secret-key"
     LOG_LEVEL: str = "INFO"
 
-    # Database settings
-    DATABASE_URL: PostgresDsn
-    DB_ECHO_LOG: bool = False
+    # Redis URL (for Celery stats)
+    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
 
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Elasticsearch URL for monitoring
+    ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"
+    
+    # CORS
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3001"]
 
-    # JWT Settings
-    SECRET_KEY: str = "change-this-secret-key-in-production"
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRY_MINUTES: int = 60
-
-    # Rate Limiting
-    RATE_LIMIT_ENABLED: bool = True
-
-    # CORS settings
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
-
-    model_config = SettingsConfigDict(
-        case_sensitive=True,
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
+    class Config:
+        env_file = ".env"
+        env_file_encoding = 'utf-8'
+        extra = 'ignore'
 
 
 settings = Settings()
