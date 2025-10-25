@@ -1,0 +1,21 @@
+# Your public Cloud Shell URL will be the main address, listening on port 443 (HTTPS)
+:443 {
+    # Use a self-signed certificate for HTTPS in local/dev environments
+    tls internal
+
+    # The 'route' block ensures directives are evaluated in order.
+    route {
+        # 1. First, try to match API requests.
+        # The 'handle_path' directive strips the matched prefix before proxying.
+        # e.g., a request to /api/auth/login will be sent to the backend as /auth/login.
+        handle_path /api/* {
+            reverse_proxy localhost:8000
+        }
+
+        # 2. If the path did not start with /api/, this handler will catch everything else
+        # and proxy it to the frontend Next.js application.
+        handle {
+            reverse_proxy localhost:3001
+        }
+    }
+}

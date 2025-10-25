@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     DEV_LOGGING: bool = False
 
+    # Development mode flag
+    DEV_MODE: bool = False
+
     # CORS settings
     # The value should be a comma-separated list of origins.
     # e.g., "http://localhost:3000,http://127.0.0.1:3000"

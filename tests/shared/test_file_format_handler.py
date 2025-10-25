@@ -3,10 +3,6 @@ from pathlib import Path
 import uuid
 import re
 import json
-
-# برای اجرای این تست، پایتون باید ماژول shared را پیدا کند.
-# این کار معمولاً با تنظیم PYTHONPATH انجام می‌شود.
-# export PYTHONPATH=$PYTHONPATH:/home/s_analyst1991/projects/the_first
 from shared.file_format_handler import (
     JSONLHandler,
     generate_filename,

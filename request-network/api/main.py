@@ -45,8 +45,8 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 # Include API routers
-app.include_router(auth_router.router)
-# app.include_router(request_router.router) # این روتر برای مدیریت کاربران توسط ادمین بود، نامش را تغییر می‌دهیم
+app.include_router(auth_router.router, prefix=settings.API_V1_STR)
+app.include_router(request_router.router, prefix=settings.API_V1_STR)
 app.include_router(admin_router.router)
 
 
