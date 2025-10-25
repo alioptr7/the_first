@@ -8,7 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from auth.security import verify_password
+from core.hashing import verify_password
 
 Base = declarative_base()
 

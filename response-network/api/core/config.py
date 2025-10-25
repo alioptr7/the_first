@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn, model_validator
-from typing import Optional, Any
+from typing import Optional, Any, List # Ensure List is imported
 
 
 class Settings(BaseSettings):
@@ -18,13 +18,22 @@ class Settings(BaseSettings):
     @model_validator(mode='before')
     def assemble_db_connection(cls, v: Any) -> Any:
         if isinstance(v, dict) and 'DATABASE_URL' not in v:
+            # Get values from v if present, otherwise use the default values defined in the class
+            # This ensures that even if .env is not loaded or values are not provided,
+            # the validator can still construct the DSN using the class defaults.
+            db_user = v.get('RESPONSE_DB_USER', cls.model_fields['RESPONSE_DB_USER'].default)
+            db_password = v.get('RESPONSE_DB_PASSWORD', cls.model_fields['RESPONSE_DB_PASSWORD'].default)
+            db_host = v.get('RESPONSE_DB_HOST', cls.model_fields['RESPONSE_DB_HOST'].default)
+            db_port = v.get('RESPONSE_DB_PORT', cls.model_fields['RESPONSE_DB_PORT'].default)
+            db_name = v.get('RESPONSE_DB_NAME', cls.model_fields['RESPONSE_DB_NAME'].default)
+
             v['DATABASE_URL'] = str(PostgresDsn.build(
                 scheme="postgresql+asyncpg",
-                username=v.get('RESPONSE_DB_USER'),
-                password=v.get('RESPONSE_DB_PASSWORD'),
-                host=v.get('RESPONSE_DB_HOST'),
-                port=int(v.get('RESPONSE_DB_PORT')),
-                path=f"{v.get('RESPONSE_DB_NAME') or ''}",
+                username=db_user,
+                password=db_password,
+                host=db_host,
+                port=int(db_port),
+                path=f"{db_name or ''}",
             ))
         return v
 
@@ -32,6 +41,9 @@ class Settings(BaseSettings):
     MONITORING_API_KEY: str = "super-secret-monitoring-key"
     SECRET_KEY: str = "change-this-secret-key"
     LOG_LEVEL: str = "INFO"
+    
+    # Development mode flag
+    DEV_MODE: bool = False
 
     # Redis URL (for Celery stats)
     REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
@@ -40,10 +52,13 @@ class Settings(BaseSettings):
     ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    # With Caddy as a reverse proxy, requests are same-origin, so complex CORS is not needed.
+    # For Cloud Shell development, we need to explicitly allow the frontend's preview URL.
+    # Example: ["https://3000-....cloudshell.dev"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["https://3001-cs-486191814526-default.cs-europe-west4-pear.cloudshell.dev/"]
 
     class Config:
-        env_file = ".env"
+        # env_file = ".env" # Temporarily disable .env loading to bypass persistent parsing issues
         env_file_encoding = 'utf-8'
         extra = 'ignore'
 

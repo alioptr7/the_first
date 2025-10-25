@@ -949,15 +949,15 @@
   - Middleware برای check authentication
   - Redirect to /login اگر not authenticated
 - [ ] Token management (JWT):
-  - [x] Set access token in `HttpOnly` cookie (initial implementation)
-  - [ ] Implement short-lived access tokens (e.g., 15 mins)
-  - [ ] Implement refresh tokens (long-lived, stored in `HttpOnly` cookie) for seamless re-authentication
-  - [ ] Implement secure logout endpoint (e.g., clearing cookies)
-  - [ ] Move JWT `SECRET_KEY` from code to configuration file (`.env`)
+  - [ ] **(Production Security)**: پیاده‌سازی مکانیزم Refresh Token برای افزایش امنیت.
+  - [ ] **(Production Security)**: تغییر مکانیزم احراز هویت به استفاده از کوکی‌های `HttpOnly` و `Secure` برای جلوگیری از حملات XSS.
+    - [ ] ارسال Access Token (کوتاه‌مدت) در بدنه پاسخ.
+    - [ ] ارسال Refresh Token (بلندمدت) در یک کوکی `HttpOnly`.
+  - [ ] **(Production Security)**: پیاده‌سازی اندپوینت امن برای Logout (حذف کوکی Refresh Token).
 - [ ] نوشتن tests (با Playwright/Cypress)
 
 **وابستگی‌ها:** 8.1  
-**تخمین زمان:** 6 ساعت  
+**تخمین زمان:** 8 ساعت  
 **اولویت:** 🔴 بالا
 
 ---
