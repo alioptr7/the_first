@@ -65,3 +65,12 @@ async def read_users_me(
 ):
     """Get the current logged-in user's details."""
     return current_user
+
+
+@router.post("/logout", summary="Admin Logout")
+async def logout(response: Response):
+    """
+    Logs out the admin user by clearing the access token cookie.
+    """
+    response.delete_cookie(key="access_token")
+    return {"message": "Logout successful"}

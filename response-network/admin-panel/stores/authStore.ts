@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from '@/lib/api';
 
 interface User {
   id: string;
@@ -14,7 +15,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   login: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -23,7 +24,15 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: async () => {
+        try {
+          await api.post('/auth/logout');
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          set({ user: null, isAuthenticated: false });
+        }
+      },
     }),
     {
       name: 'auth-storage', // نام key در localStorage
