@@ -4,11 +4,11 @@ import sys
 import uuid
 from datetime import datetime, timezone
 
-import bcrypt
 from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select
+from core.hashing import get_password_hash
 
 # --- Path Setup ---
 # This allows the script to find modules in the 'api' and 'shared' directories.
@@ -25,7 +25,7 @@ def get_database_url():
     user = os.getenv("RESPONSE_DB_USER", "user")
     password = os.getenv("RESPONSE_DB_PASSWORD", "password")
     host = os.getenv("RESPONSE_DB_HOST", "localhost")
-    port = os.getenv("RESPONSE_DB_PORT", "5433")
+    port = os.getenv("RESPONSE_DB_PORT", "5432")
     db_name = os.getenv("RESPONSE_DB_NAME", "response_db")
 
     if not all([user, password, host, port, db_name]):
@@ -35,11 +35,8 @@ def get_database_url():
 
 
 def hash_password(password: str) -> str:
-    """Hashes a password using bcrypt."""
-    pwd_bytes = password.encode('utf-8')
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed_password.decode('utf-8')
+    """Hashes a password using core hashing module."""
+    return get_password_hash(password)
 
 
 async def seed_data():

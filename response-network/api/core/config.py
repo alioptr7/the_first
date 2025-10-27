@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn, model_validator
-from typing import Optional, Any, List # Ensure List is imported
+from typing import Optional, Any, List
 
 
 class Settings(BaseSettings):
@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # --- Database Settings ---
     RESPONSE_DB_USER: str = "user"
     RESPONSE_DB_PASSWORD: str = "password"
-    RESPONSE_DB_HOST: str = "postgres-response"
+    RESPONSE_DB_HOST: str = "localhost"  # Changed to localhost for local development
     RESPONSE_DB_PORT: int = 5432
     RESPONSE_DB_NAME: str = "response_db"
     DATABASE_URL: Optional[PostgresDsn] = None
@@ -43,10 +43,13 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     
     # Development mode flag
-    DEV_MODE: bool = False
+    DEV_MODE: bool = True
+
+    # CORS settings
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 
     # Redis URL (for Celery stats)
-    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
+    REDIS_URL: RedisDsn = "redis://localhost:6379/0"
 
     # Elasticsearch URL for monitoring
     ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"

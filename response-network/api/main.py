@@ -18,6 +18,9 @@ if str(project_root) not in sys.path:
 
 from core.config import settings
 from db.session import get_db_session
+from router.request_router import router as request_router
+from router.system_router import router as system_router
+from router.user_router import router as user_router
 from dependencies import get_api_key
 from router import auth_router
 from router import stats_router
@@ -35,19 +38,27 @@ app = FastAPI(
 )
 
 # Set all CORS enabled origins
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://0.0.0.0:3000",
+        "http://0.0.0.0:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["Content-Type", "Content-Length"],
+)
 
 
 # Include routers
-app.include_router(auth_router.router)
-app.include_router(stats_router.router)
+app.include_router(request_router)
+app.include_router(system_router)
+app.include_router(user_router)
 
 
 @app.on_event("startup")

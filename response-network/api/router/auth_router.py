@@ -77,14 +77,6 @@ async def read_users_me(
 
 
 @router.post("/logout", summary="Admin Logout")
-<<<<<<< HEAD
-async def logout(response: Response):
-    """
-    Logs out the admin user by clearing the access token cookie.
-    """
-    response.delete_cookie(key="access_token")
-    return {"message": "Logout successful"}
-=======
 async def logout_user(response: Response):
     """
     Logs out the current user by deleting the HttpOnly access_token cookie.
@@ -96,4 +88,3 @@ async def logout_user(response: Response):
         samesite="lax",
     )
     return {"message": "Logout successful"}
->>>>>>> 8872923d0365af6f7faa5534db6e2b10796f912d
