@@ -7,6 +7,7 @@ import logging
 
 from models.schemas import SystemStats, SystemHealth, LogEntry
 from models.request import Request
+from workers.elasticsearch_client import ElasticsearchClient
 
 async def get_system_stats(db: AsyncSession) -> SystemStats:
     """Get current system resource usage and performance metrics."""
@@ -46,15 +47,61 @@ async def get_system_health(db: AsyncSession) -> SystemHealth:
     """Check health status of all system components."""
     components = {}
     
-    # Check database
+    # Check PostgreSQL
     try:
+        # Basic connectivity check
         await db.execute(select(1))
-        components["database"] = "healthy"
+        
+        # Get PostgreSQL version and some basic stats
+        result = await db.execute("""
+            SELECT version(),
+                   pg_database_size(current_database()) as db_size,
+                   (SELECT count(*) FROM pg_stat_activity) as connections,
+                   pg_is_in_recovery() as is_replica
+        """)
+        pg_stats = await result.fetchone()
+        
+        db_status = {
+            "version": pg_stats[0].split()[0],
+            "db_size_mb": round(pg_stats[1] / (1024 * 1024), 2),
+            "active_connections": pg_stats[2],
+            "is_replica": pg_stats[3]
+        }
+        
+        # Check if we're approaching connection limit
+        result = await db.execute("""
+            SELECT setting::int as max_connections
+            FROM pg_settings
+            WHERE name = 'max_connections'
+        """)
+        max_connections = (await result.fetchone())[0]
+        connection_ratio = pg_stats[2] / max_connections
+        
+        if connection_ratio > 0.8:  # More than 80% connections used
+            components["database"] = "degraded"
+            db_status["warning"] = f"High connection usage: {pg_stats[2]}/{max_connections}"
+        else:
+            components["database"] = "healthy"
+            
+        # Add stats to the components details
+        components["database_stats"] = db_status
+        
     except Exception as e:
         components["database"] = "down"
         logging.error(f"Database health check failed: {str(e)}")
+        components["database_stats"] = {"error": str(e)}
     
-    # Add other component checks here (Redis, external services, etc.)
+    # Check Elasticsearch
+    try:
+        es_client = ElasticsearchClient()
+        if await es_client.check_health():
+            components["elasticsearch"] = "healthy"
+        else:
+            components["elasticsearch"] = "degraded"
+        await es_client.close_connection()
+    except Exception as e:
+        components["elasticsearch"] = "down"
+        logging.error(f"Elasticsearch health check failed: {str(e)}")
     
     # Determine overall status
     if "down" in components.values():
@@ -64,9 +111,15 @@ async def get_system_health(db: AsyncSession) -> SystemHealth:
     else:
         status = "healthy"
     
+    # Collect all components stats
+    components_stats = {}
+    if "database_stats" in components:
+        components_stats["database"] = components.pop("database_stats")
+    
     return SystemHealth(
         status=status,
         components=components,
+        components_stats=components_stats,
         last_check=datetime.utcnow()
     )
 

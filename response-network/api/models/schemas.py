@@ -38,7 +38,7 @@ class Request(RequestBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RequestStats(BaseModel):
     total: int
@@ -57,6 +57,7 @@ class QueryStats(BaseModel):
 class SystemHealth(BaseModel):
     status: str
     components: Dict[str, str]
+    components_stats: Optional[Dict[str, Dict[str, Any]]] = None
     last_check: datetime
 
 class SystemStats(BaseModel):
