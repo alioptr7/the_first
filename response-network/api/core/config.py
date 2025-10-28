@@ -7,6 +7,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Response Network Monitoring API"
     API_V1_STR: str = "/api/v1"
 
+    # --- Security Settings ---
+    SECRET_KEY: str = "a_very_secret_key_for_response_network_admin"  # Change this in production!
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ALGORITHM: str = "HS256"
+
     # --- Database Settings ---
     RESPONSE_DB_USER: str = "user"
     RESPONSE_DB_PASSWORD: str = "password"
@@ -39,7 +44,6 @@ class Settings(BaseSettings):
 
     # Secret key for API access
     MONITORING_API_KEY: str = "super-secret-monitoring-key"
-    SECRET_KEY: str = "change-this-secret-key"
     LOG_LEVEL: str = "INFO"
     
     # Development mode flag

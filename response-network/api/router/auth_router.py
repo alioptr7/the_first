@@ -1,28 +1,30 @@
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from pydantic import BaseModel
 
 from auth import security
 from core.config import settings
 from db.session import get_db_session
 from models.user import User
 from schemas.user import UserRead
+from models.schemas import Token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/login", summary="Admin Login with Cookie")
-async def login_for_access_token(
+@router.post("/login", response_model=Token)
+async def login(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db_session),
 ):
     """
-    Authenticates an admin user and sets the JWT as an HttpOnly cookie.
+    Universal login endpoint that accepts both form data and JSON.
     The username can be the user's username or email address.
     """
     # 1. Find the user by username or email
@@ -32,25 +34,34 @@ async def login_for_access_token(
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 
-    # 2. Check if user exists, is active, is an admin, and password is correct
+    # 2. Check if user exists, is active, and password is correct
     if (
         not user
         or not user.is_active
-        or user.profile_type != "admin"
         or not security.verify_password(form_data.password, user.hashed_password)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password, or insufficient privileges",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # 3. Create the access token
-    access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # Create token data with user_id and scopes
+    token_data = {
+        "user_id": str(user.id),
+        "scopes": ["admin"] if user.profile_type == "admin" else ["user"]
+    }
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = security.create_access_token(
+        data=token_data,
+        expires_delta=access_token_expires
+    )
     access_token = security.create_access_token(
         data={
             "user_id": str(user.id),
-            "scopes": ["admin"],  # Scope is hardcoded to admin for this panel
+            "scopes": ["admin"] if user.profile_type == "admin" else [],
         },
         expires_delta=access_token_expires,
     )
@@ -58,14 +69,17 @@ async def login_for_access_token(
     # 4. Set the token in an HttpOnly cookie
     response.set_cookie(
         key="access_token",
-        value=f"bearer {access_token}",
+        value=access_token,  # No bearer prefix for simplicity
         httponly=True,
-        secure=not settings.DEV_MODE,  # True in production
+        secure=not settings.DEV_MODE,
         samesite="lax",
         max_age=int(access_token_expires.total_seconds()),
     )
 
-    return {"message": "Login successful"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
 @router.get("/me", response_model=UserRead, summary="Get Current User")

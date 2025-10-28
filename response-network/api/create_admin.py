@@ -1,40 +1,25 @@
-from sqlalchemy import create_engine, text
-import bcrypt
+import asyncio
+import uuid
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# Database connection settings
-DB_USER = "user"
-DB_PASS = "password"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "response_db"
+from db.session import async_session
+from models.user import User
+from core.security import get_password_hash
 
-# Create database URL
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-def create_admin_user():
-    # Create database engine
-    engine = create_engine(DATABASE_URL)
-    
-    # Hash the password
-    password = "admin".encode('utf-8')
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(password, salt).decode('utf-8')
-    
-    # SQL query to insert admin user
-    sql = text("""
-        INSERT INTO users (email, hashed_password, is_active, is_admin, full_name)
-        VALUES (:email, :password, true, true, 'Admin User')
-        ON CONFLICT (email) DO UPDATE 
-        SET hashed_password = :password, is_active = true, is_admin = true
-    """)
-    
-    try:
-        with engine.connect() as conn:
-            conn.execute(sql, {"email": "admin@example.com", "password": hashed_password})
-            conn.commit()
-            print("Admin user created/updated successfully!")
-    except Exception as e:
-        print(f"Error creating admin user: {e}")
+async def create_admin_user():
+    async with async_session() as session:
+        admin_user = User(
+            id=uuid.uuid4(),
+            username="admin2",
+            email="admin2@example.com",
+            hashed_password=get_password_hash("admin123"),
+            full_name="Admin User",
+            profile_type="admin",
+            is_active=True
+        )
+        session.add(admin_user)
+        await session.commit()
+        print("Admin user created successfully!")
 
 if __name__ == "__main__":
-    create_admin_user()
+    asyncio.run(create_admin_user())

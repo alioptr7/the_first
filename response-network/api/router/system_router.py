@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime, timedelta
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/system", tags=["system"])
 
 @router.get("/stats", response_model=SystemStats)
 async def get_system_stats(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -23,7 +23,7 @@ async def get_system_stats(
 
 @router.get("/health", response_model=SystemHealth)
 async def get_system_health(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -37,7 +37,7 @@ async def get_system_logs(
     end_date: Optional[datetime] = Query(None),
     level: Optional[str] = Query(None, enum=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
     limit: int = Query(100, le=1000),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """

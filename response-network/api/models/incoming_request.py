@@ -28,4 +28,4 @@ class IncomingRequest(BaseModel):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    result = relationship("QueryResult", back_populates="request", uselist=False, cascade="all, delete-orphan")
+    result = relationship("QueryResult", back_populates="request", uselist=False, cascade="all, delete-orphan", lazy="joined")

@@ -5,7 +5,6 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from shared.database.base import BaseModel
-from .incoming_request import IncomingRequest
 
 
 class QueryResult(BaseModel):
@@ -23,4 +22,4 @@ class QueryResult(BaseModel):
     export_batch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    request: Mapped["IncomingRequest"] = relationship("IncomingRequest", back_populates="result")
+    request = relationship("IncomingRequest", back_populates="result")

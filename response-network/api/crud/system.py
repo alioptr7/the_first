@@ -1,13 +1,14 @@
 import psutil
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from models.schemas import SystemStats, SystemHealth, LogEntry
 from models.request import Request
 
-async def get_system_stats(db: Session) -> SystemStats:
+async def get_system_stats(db: AsyncSession) -> SystemStats:
     """Get current system resource usage and performance metrics."""
     # Get system resource usage
     cpu_usage = psutil.cpu_percent()
@@ -15,18 +16,23 @@ async def get_system_stats(db: Session) -> SystemStats:
     disk = psutil.disk_usage('/')
     
     # Calculate requests per minute
-    one_minute_ago = datetime.utcnow() - datetime.timedelta(minutes=1)
-    requests_last_minute = db.query(Request)\
-        .filter(Request.created_at >= one_minute_ago)\
-        .count()
+    one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+    result = await db.execute(
+        select(func.count(Request.id))
+        .where(Request.created_at >= one_minute_ago)
+    )
+    requests_last_minute = result.scalar() or 0
     
     # Calculate average response time for completed requests in last hour
-    one_hour_ago = datetime.utcnow() - datetime.timedelta(hours=1)
-    avg_response_time = db.query(func.avg(Request.processing_time))\
-        .filter(
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    result = await db.execute(
+        select(func.avg(Request.processing_time))
+        .where(
             Request.status == "completed",
             Request.created_at >= one_hour_ago
-        ).scalar() or 0.0
+        )
+    )
+    avg_response_time = result.scalar() or 0.0
 
     return SystemStats(
         cpu_usage=cpu_usage,
@@ -36,13 +42,13 @@ async def get_system_stats(db: Session) -> SystemStats:
         avg_response_time=float(avg_response_time)
     )
 
-async def get_system_health(db: Session) -> SystemHealth:
+async def get_system_health(db: AsyncSession) -> SystemHealth:
     """Check health status of all system components."""
     components = {}
     
     # Check database
     try:
-        db.execute("SELECT 1")
+        await db.execute(select(1))
         components["database"] = "healthy"
     except Exception as e:
         components["database"] = "down"
@@ -65,7 +71,7 @@ async def get_system_health(db: Session) -> SystemHealth:
     )
 
 async def get_logs(
-    db: Session,
+    db: AsyncSession,
     start_date: datetime,
     end_date: datetime,
     level: Optional[str] = None,

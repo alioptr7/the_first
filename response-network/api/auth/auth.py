@@ -15,18 +15,24 @@ from auth.dependencies import get_current_active_user
 
 router = APIRouter(tags=["authentication"])
 
+from pydantic import BaseModel
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 @router.post("/login/access-token", response_model=Token)
 async def login_access_token(
     db: Session = Depends(get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
+    login_data: LoginRequest = Body(...)
 ) -> Any:
-    """OAuth2 compatible token login, get an access token for future requests."""
+    """Simple login endpoint that accepts JSON"""
     user = await user_service.authenticate(
-        db, username=form_data.username, password=form_data.password
+        db, username=login_data.username, password=login_data.password
     )
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    elif user.status != "active":
+    elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
         
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

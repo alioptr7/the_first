@@ -48,6 +48,12 @@ async def seed_data():
 
     async with engine.connect() as conn:
         print("--- Starting to seed data for response-network ---")
+        
+        # First, delete existing users
+        print("Deleting existing users...")
+        await conn.execute(text("DELETE FROM users"))
+        await conn.commit()
+        print("-> Existing users deleted.")
 
         # --- 1. Create Users ---
         print("Creating users...")
@@ -88,8 +94,7 @@ async def seed_data():
         user_insert_stmt = text(
             """
             INSERT INTO users (id, username, email, hashed_password, full_name, profile_type, priority, is_active)
-            VALUES (:id, :username, :email, :hashed_password, :full_name, :profile_type, :priority, :is_active)
-            ON CONFLICT (username) DO NOTHING;
+            VALUES (:id, :username, :email, :hashed_password, :full_name, :profile_type, :priority, :is_active);
             """
         )
         await conn.execute(user_insert_stmt, users_to_create)

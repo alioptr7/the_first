@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
 
@@ -9,15 +9,15 @@ from models.user import User as UserModel
 from auth.dependencies import get_current_admin_user
 from crud import users as user_service
 
-router = APIRouter(prefix="/api/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=List[UserWithStats])
 async def list_users(
-    role: Optional[str] = Query(None, enum=['admin', 'user', 'viewer']),
-    status: Optional[str] = Query(None, enum=['active', 'inactive', 'suspended']),
+    profile_type: Optional[str] = Query(None, enum=['admin', 'user', 'viewer']),
+    is_active: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -26,16 +26,16 @@ async def list_users(
     """
     return await user_service.get_users_with_stats(
         db,
-        role=role,
-        status=status,
+        profile_type=profile_type,
+        is_active=is_active,
         skip=skip,
         limit=limit
     )
 
 @router.get("/{user_id}", response_model=UserWithStats)
 async def get_user(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -50,7 +50,7 @@ async def get_user(
 @router.post("", response_model=User)
 async def create_user(
     user_in: UserCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -61,9 +61,9 @@ async def create_user(
 
 @router.put("/{user_id}", response_model=User)
 async def update_user(
-    user_id: int,
+    user_id: str,
     user_in: UserUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -77,8 +77,8 @@ async def update_user(
 
 @router.delete("/{user_id}")
 async def delete_user(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -93,8 +93,8 @@ async def delete_user(
 
 @router.post("/{user_id}/suspend")
 async def suspend_user(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """
@@ -109,8 +109,8 @@ async def suspend_user(
 
 @router.post("/{user_id}/activate")
 async def activate_user(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
     """

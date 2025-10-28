@@ -17,22 +17,41 @@ router = APIRouter(prefix="/api", tags=["requests"])
 @router.get("/requests", response_model=PaginatedResponse)
 async def list_requests(
     status: Optional[str] = Query(None, enum=['pending', 'processing', 'completed', 'failed']),
+    user_id: Optional[str] = Query(None, description="Filter requests by user ID"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get a paginated list of requests with optional status filter.
+    Get a paginated list of requests with optional status and user filters.
+    If user_id is provided, returns requests for that specific user.
+    If not provided, returns all requests (admin only).
     """
+    # Check if user is trying to access other user's requests
+    if user_id and user_id != str(current_user.id) and not current_user.profile_type == 'admin':
+        raise HTTPException(
+            status_code=403,
+            detail="You can only view your own requests"
+        )
+    
     skip = (page - 1) * size
+    # Non-admin users can only see their own requests
+    if current_user.profile_type != 'admin':
+        user_id = str(current_user.id)
+        
     requests = await request_service.get_requests(
         db,
         status=status,
+        user_id=user_id,
         skip=skip,
         limit=size
     )
-    total = await request_service.get_requests_count(db, status=status)
+    total = await request_service.get_requests_count(
+        db, 
+        status=status,
+        user_id=user_id
+    )
     
     return PaginatedResponse(
         items=requests,
