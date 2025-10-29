@@ -18,6 +18,14 @@ class BaseBatch(BaseModel):
     record_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     checksum: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default='pending', index=True)
+
+
+class ExportBatch(BaseBatch):
+    __tablename__ = "response_export_batches"
+
+
+class ImportBatch(BaseBatch):
+    __tablename__ = "response_import_batches"
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 

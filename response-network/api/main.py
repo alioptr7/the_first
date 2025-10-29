@@ -8,15 +8,19 @@ from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.security import OAuth2PasswordBearer
 
 # --- Start of Path Fix ---
-# Add project root and response-network to the Python path
-project_root = Path(__file__).resolve().parents[2]
-response_network_root = Path(__file__).resolve().parents[1]
+# Add project root, response-network, and api to the Python path
+project_root = Path(__file__).resolve().parents[2]  # the_first/
+response_network_root = Path(__file__).resolve().parents[1]  # response-network/
+api_root = Path(__file__).resolve().parent  # api/
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 if str(response_network_root) not in sys.path:
     sys.path.append(str(response_network_root))
+if str(api_root) not in sys.path:
+    sys.path.append(str(api_root))
 # --- End of Path Fix ---
 
 from core.config import settings
@@ -24,9 +28,10 @@ from db.session import get_db_session
 from router.request_router import router as request_router
 from router.system_router import router as system_router
 from router.user_router import router as user_router
+from router.monitoring_router import router as monitoring_router
+from router.stats_router import router as stats_router
 from auth.security import get_current_user
 from router import auth_router
-from router import stats_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +43,17 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=[
+        {"name": "system", "description": "System health endpoints"},
+        {"name": "monitoring", "description": "Monitoring and statistics endpoints"},
+        {"name": "auth", "description": "Authentication operations"},
+        {"name": "users", "description": "User management operations"},
+        {"name": "requests", "description": "Request handling endpoints"}
+    ]
 )
+
+# Configure Security
+from auth.dependencies import oauth2_scheme
 
 # Set all CORS enabled origins
 app.add_middleware(
@@ -58,23 +73,39 @@ app.add_middleware(
 )
 
 
-# Include routers
-app.include_router(request_router, prefix=settings.API_V1_STR)
-app.include_router(system_router, prefix=settings.API_V1_STR)
-app.include_router(user_router, prefix=settings.API_V1_STR)
+# Include routers with security scheme
+app.include_router(
+    request_router, 
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+app.include_router(
+    system_router, 
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+app.include_router(
+    user_router, 
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+app.include_router(
+    monitoring_router,
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+app.include_router(
+    stats_router,
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+# Auth router doesn't need the security scheme as it contains the login endpoint
 app.include_router(auth_router.router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")
 async def startup_event():
     logger.info("Monitoring API startup...")
-
-@app.get(f"{settings.API_V1_STR}/health", tags=["Monitoring"])
-async def health_check():
-    """Basic liveness check."""
-    return {"status": "ok"}
-
-@app.get(f"{settings.API_V1_STR}/health/detailed", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
 async def detailed_health_check(db: AsyncSession = Depends(get_db_session)):
     """
     Performs a detailed health check on critical services.
@@ -100,7 +131,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db_session)):
 
     return health_status
 
-@app.get(f"{settings.API_V1_STR}/stats/queues", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
+@app.get(f"{settings.API_V1_STR}/stats/queues", tags=["monitoring"], dependencies=[Depends(oauth2_scheme)])
 async def queue_stats():
     """
     Gets the length of the main Celery task queues.
@@ -118,7 +149,7 @@ async def queue_stats():
         logger.error(f"Could not get queue stats: {e}")
         raise HTTPException(status_code=500, detail="Could not connect to Redis to get queue stats.")
 
-@app.get(f"{settings.API_V1_STR}/stats/workers", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
+@app.get(f"{settings.API_V1_STR}/stats/workers", tags=["monitoring"], dependencies=[Depends(oauth2_scheme)])
 async def worker_stats():
     """
     Gets a list of active (online) Celery workers by pinging them.
@@ -142,7 +173,7 @@ async def worker_stats():
         logger.error(f"Could not get worker stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Could not inspect Celery workers: {e}")
 
-@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
+@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["monitoring"], dependencies=[Depends(oauth2_scheme)])
 async def cache_stats():
     """
     Gets statistics about the Redis cache, including memory usage and hit/miss ratio.

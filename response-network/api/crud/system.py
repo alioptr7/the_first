@@ -43,8 +43,15 @@ async def get_system_stats(db: AsyncSession) -> SystemStats:
         avg_response_time=float(avg_response_time)
     )
 
-async def get_system_health(db: AsyncSession) -> SystemHealth:
-    """Check health status of all system components."""
+async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemHealth:
+    """
+    Check health status of all system components.
+    
+    Args:
+        db: Database session
+        detailed: If True, includes sensitive information like connection details
+                 and internal metrics. Default is False for basic health check.
+    """
     components = {}
     
     # Check PostgreSQL
@@ -102,6 +109,14 @@ async def get_system_health(db: AsyncSession) -> SystemHealth:
     except Exception as e:
         components["elasticsearch"] = "down"
         logging.error(f"Elasticsearch health check failed: {str(e)}")
+    
+    # If not detailed, remove sensitive information
+    if not detailed:
+        if "database_stats" in components:
+            # Keep only essential info for basic health check
+            components["database_stats"] = {
+                "status": components["database"]
+            }
     
     # Determine overall status
     if "down" in components.values():

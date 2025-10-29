@@ -3,9 +3,9 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from sqlalchemy import func, and_
 
-from ..models.request import Request
-from ..models.response import Response
-from ..models.schemas import (
+from models.request import Request
+from models.query_result import QueryResult
+from models.schemas import (
     RequestStats,
     QueryStats,
     SystemHealth,
@@ -32,9 +32,9 @@ async def get_request_stats(
     successful = query.filter(Request.status == "completed").count()
     failed = query.filter(Request.status == "failed").count()
     avg_response_time = db.query(
-        func.avg(Response.response_time)
+        func.avg(QueryResult.response_time)
     ).filter(
-        Response.request_id.in_(query.with_entities(Request.id))
+        QueryResult.request_id.in_(query.with_entities(Request.id))
     ).scalar() or 0.0
 
     return RequestStats(

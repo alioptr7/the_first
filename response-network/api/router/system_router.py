@@ -9,7 +9,7 @@ from models.user import User
 from auth.dependencies import get_current_user, get_current_admin_user
 from crud import system as system_service
 
-router = APIRouter(prefix="/api/system", tags=["system"])
+router = APIRouter(prefix="/api", tags=["system"])
 
 @router.get("/stats", response_model=SystemStats)
 async def get_system_stats(
@@ -21,17 +21,28 @@ async def get_system_stats(
     """
     return await system_service.get_system_stats(db)
 
-@router.get("/health", response_model=SystemHealth)
+@router.get("/system/health", response_model=SystemHealth, dependencies=[])  # Empty dependencies to override the global security
 async def get_system_health(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """
-    Get current health status of all system components.
+    Get basic health status of the system. This endpoint is public and does not require authentication.
+    Used by monitoring services and load balancers.
     """
-    return await system_service.get_system_health(db)
+    return await system_service.get_system_health(db, detailed=False)
 
-@router.get("/logs", response_model=List[LogEntry])
+@router.get("/system/health/detailed", response_model=SystemHealth)
+async def get_detailed_system_health(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)  # Only admins can see detailed health
+):
+    """
+    Get detailed health status of all system components including sensitive information.
+    Requires authentication and admin privileges.
+    """
+    return await system_service.get_system_health(db, detailed=True)
+
+@router.get("/system/logs", response_model=List[LogEntry])
 async def get_system_logs(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),

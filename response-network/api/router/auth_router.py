@@ -14,7 +14,7 @@ from models.user import User
 from schemas.user import UserRead
 from models.schemas import Token
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=Token)
