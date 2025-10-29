@@ -1,13 +1,14 @@
 from typing import List, Annotated
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.dependencies import get_current_active_user, check_user_limits, check_index_access
-from core.dependencies import get_db_session
+from core.dependencies import get_db
 from models.user import User
 from models.request import Request
-from schemas.request import QueryRequest, QueryResponse
+from schemas.search import QueryRequest, QueryResponse
 
 router = APIRouter(
     prefix="/search",
@@ -20,11 +21,14 @@ router = APIRouter(
     status_code=status.HTTP_200_OK,
     description="Execute a search query against Elasticsearch"
 )
+def get_indices_from_query(query: QueryRequest) -> list[str]:
+    """Extract indices from query for index access check."""
+    return query.indices
+
 async def execute_search(
     query: QueryRequest,
     current_user: Annotated[User, Depends(check_user_limits)],  # This will check request limits
-    _: Annotated[User, Depends(check_index_access(query.indices))],  # This will check index access
-    db: AsyncSession = Depends(get_db_session),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Execute a search query against Elasticsearch.
@@ -32,6 +36,14 @@ async def execute_search(
     - Validates index access
     - Enforces max results limit
     """
+    # Check index access
+    allowed_indices = json.loads(current_user.allowed_indices)
+    unauthorized_indices = [idx for idx in query.indices if idx not in allowed_indices]
+    if unauthorized_indices:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied to indices: {', '.join(unauthorized_indices)}"
+        )
     # Ensure max results limit is respected
     if query.size > current_user.max_results_per_request:
         raise HTTPException(

@@ -5,13 +5,28 @@ from pydantic import BaseModel, Field, ConfigDict
 from .response import ResponsePublic
 
 
+class FieldRequest(BaseModel):
+    """
+    Schema for specific fields in a service request.
+    """
+    msisdn: str = Field(..., description="Phone number in international format")
+    fromTime: str = Field(..., description="Start date/time of the request period")
+    toTime: str = Field(..., description="End date/time of the request period")
+
+class RequestDetail(BaseModel):
+    """
+    Schema for service request details.
+    """
+    serviceName: str = Field(..., description="Name of the service to query")
+    fieldRequest: FieldRequest = Field(..., description="Specific fields for the request")
+
 class RequestCreate(BaseModel):
     """
     Schema for creating a new request. This is the data a user sends.
     """
-    query_type: str = Field(..., min_length=3, max_length=50, description="The type of query to be executed.")
-    query_params: dict = Field(..., description="The parameters for the query in JSON format.")
-
+    reqState: str = Field(default="PENDING", description="Current state of the request")
+    name: str = Field(..., description="Unique name/identifier for the request")
+    request: RequestDetail = Field(..., description="Details of the request including service and fields")
 
 class RequestStatus(BaseModel):
     """

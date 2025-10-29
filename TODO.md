@@ -133,7 +133,7 @@
 - [x] ایجاد initial migration
 - [x] پیاده‌سازی `users` table (read-only replica)
   - UUID primary key (synced)
-  - Fields for rate limiting and user info
+  - Fields for rate limiting, index access control, and user info
 - [x] پیاده‌سازی `requests` table (Done)
   - UUID primary key
   - Foreign key به users
@@ -167,7 +167,7 @@
 - [x] پیاده‌سازی `users` table (source of truth)
   - UUID primary key
   - Authentication fields (password hashing)
-  - Profile & rate limiting fields
+  - Basic user fields (without rate limiting)
   - Indexes & Constraints
 - [x] پیاده‌سازی `incoming_requests` table
   - Mirror از requests table
@@ -472,10 +472,6 @@
   - دریافت result
   - Cache check (Redis)
   - Return با metadata (execution time, etc.)
-- [ ] `GET /responses`:
-  - لیست پاسخ‌های کاربر
-  - Pagination
-  - Filtering
 - [ ] Response caching strategy:
   - Cache در Redis برای hot data (TTL: 1 hour)
   - Fallback به PostgreSQL

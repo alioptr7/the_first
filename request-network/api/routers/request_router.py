@@ -29,19 +29,39 @@ async def submit_request(
     """
     Submit a new request for processing.
 
-    This is the primary endpoint for users to send their queries to the system.
-    The request will be saved with a 'pending' status and processed by a background worker.
+    This endpoint handles:
+    1. Unique name validation
+    2. Service (index) access verification
+    3. Request creation with elasticsearch query parameters
     """
-    # Perform validation on the incoming data against the user's profile
-    validate_request_payload(request_data, current_user)
+    # 1. Check if request name is unique
+    existing_request = await db.execute(
+        select(Request).where(Request.name == request_data.name)
+    )
+    if existing_request.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Request with name '{request_data.name}' already exists"
+        )
 
+    # 2. Check if user has access to the requested service/index
+    allowed_indices = json.loads(current_user.allowed_indices)
+    if request_data.request.serviceName not in allowed_indices:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied to service: {request_data.request.serviceName}"
+        )
+
+    # 3. Create request object
     new_request = Request(
         user_id=current_user.id,
-        query_type=request_data.query_type,
-        query_params=request_data.query_params,
+        name=request_data.name,
+        query_type=request_data.request.serviceName,
+        query_params=request_data.request.fieldRequest.model_dump(),
         priority=current_user.priority,  # Inherit priority from user profile
-        status="pending",
+        status=request_data.reqState,
     )
+    
     db.add(new_request)
     await db.commit()
     await db.refresh(new_request)

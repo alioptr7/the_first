@@ -14,6 +14,7 @@ class Request(BaseModel):
     __tablename__ = "requests"
     
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     query_type: Mapped[str] = mapped_column(String(50), nullable=False)
     query_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
     elasticsearch_query: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
