@@ -30,6 +30,7 @@ from router.system_router import router as system_router
 from router.user_router import router as user_router
 from router.monitoring_router import router as monitoring_router
 from router.stats_router import router as stats_router
+from router.search_router import router as search_router
 from auth.security import get_current_user
 from router import auth_router
 
@@ -91,6 +92,10 @@ app.include_router(
 )
 app.include_router(
     monitoring_router,
+    prefix=settings.API_V1_STR,
+)
+app.include_router(
+    search_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(oauth2_scheme)]
 )

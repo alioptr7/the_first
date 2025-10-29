@@ -9,6 +9,10 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str | None = None
     username: str
+    daily_request_limit: int = 100
+    monthly_request_limit: int = 2000
+    max_results_per_request: int = 1000
+    allowed_indices: list[str] = []
 
 
 class UserRead(UserBase):
@@ -16,6 +20,10 @@ class UserRead(UserBase):
     id: uuid.UUID
     profile_type: str
     is_active: bool
+    daily_request_limit: int
+    monthly_request_limit: int
+    max_results_per_request: int
+    allowed_indices: list[str]
 
     class Config:
         from_attributes = True

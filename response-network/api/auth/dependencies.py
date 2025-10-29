@@ -2,8 +2,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Optional
+from sqlalchemy import select, text
+from typing import Optional, Annotated
+from datetime import datetime
+import json
 
 from core.config import settings
 from core.dependencies import get_db
@@ -47,6 +49,78 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+async def check_user_limits(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    """Check user request limits and return the user if within limits."""
+    # Get current time for calculations
+    now = datetime.utcnow()
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Count requests for today
+    result = await db.execute(
+        text("""
+        SELECT COUNT(*) 
+        FROM requests 
+        WHERE user_id = :user_id 
+        AND created_at >= :start_date
+        """),
+        {"user_id": str(current_user.id), "start_date": start_of_day}
+    )
+    daily_count = result.scalar()
+    
+    if daily_count >= current_user.daily_request_limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily request limit exceeded"
+        )
+
+    # Count requests for this month
+    result = await db.execute(
+        text("""
+        SELECT COUNT(*) 
+        FROM requests 
+        WHERE user_id = :user_id 
+        AND created_at >= :start_date
+        """),
+        {"user_id": str(current_user.id), "start_date": start_of_month}
+    )
+    monthly_count = result.scalar()
+    
+    if monthly_count >= current_user.monthly_request_limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Monthly request limit exceeded"
+        )
+    
+    return current_user
+
+def check_index_access(indices: list[str]):
+    """Create a dependency that checks if user has access to requested indices."""
+    async def index_access_checker(
+        current_user: Annotated[User, Depends(get_current_user)]
+    ):
+        # Parse allowed indices from JSON string
+        allowed_indices = json.loads(current_user.allowed_indices)
+        
+        # Check if user has access to all requested indices
+        unauthorized_indices = [
+            idx for idx in indices 
+            if idx not in allowed_indices
+        ]
+        
+        if unauthorized_indices:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied to indices: {', '.join(unauthorized_indices)}"
+            )
+        
+        return current_user
+    
+    return index_access_checker
 
 async def get_current_admin_user(
     current_user: User = Depends(get_current_active_user),

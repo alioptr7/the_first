@@ -48,6 +48,8 @@ def get_database_url():
     """Construct the database URL from environment variables."""
     # Load variables from .env file if present
     load_dotenv()
+    
+    return "postgresql+psycopg://user:password@localhost:5433/response_db"
 
     user = os.getenv("RESPONSE_DB_USER", "user")
     password = os.getenv("RESPONSE_DB_PASSWORD", "password")
