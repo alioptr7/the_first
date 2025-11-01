@@ -3,3 +3,4 @@
 
 from api.db.base_class import Base  # noqa
 from api.db.models.user import User  # noqa
+from api.models.task_log import TaskLog  # noqa

@@ -108,3 +108,48 @@ async def normal_user(session: AsyncSession) -> User:
 def normal_user_token(normal_user: User) -> Dict[str, str]:
     """فیکسچر توکن کاربر عادی"""
     return {"Authorization": f"Bearer {normal_user.generate_token()}"}
+
+
+@pytest_asyncio.fixture
+async def test_user(session: AsyncSession) -> User:
+    """فیکسچر کاربر تست"""
+    user = User(
+        username="test_user",
+        email="test@example.com",
+        hashed_password="test_hash",
+        is_admin=False
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    # اضافه کردن توکن به کاربر برای استفاده راحت‌تر در تست‌ها
+    user.token = user.generate_token()
+    return user
+
+
+@pytest_asyncio.fixture
+async def other_user(session: AsyncSession) -> User:
+    """فیکسچر کاربر دیگر برای تست دسترسی‌ها"""
+    user = User(
+        username="other_user",
+        email="other@example.com",
+        hashed_password="test_hash",
+        is_admin=False
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    # اضافه کردن توکن به کاربر برای استفاده راحت‌تر در تست‌ها
+    user.token = user.generate_token()
+    return user
+
+
+@pytest.fixture
+def redis_client():
+    """فیکسچر Redis برای تست‌های کش"""
+    import fakeredis
+    redis_client = fakeredis.FakeStrictRedis()
+    
+    # پچ کردن کلاینت Redis در سرویس
+    with patch('api.services.redis_service.redis_client', redis_client):
+        yield redis_client

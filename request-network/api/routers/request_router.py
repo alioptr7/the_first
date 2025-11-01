@@ -13,6 +13,8 @@ from models.request import Request
 from auth.dependencies import get_current_active_user
 # from rate_limiter import check_rate_limit  # TODO: Fix rate limiter
 from schemas.request import RequestCreate, RequestPublic, RequestStatus
+from schemas.response_detail import ResponseDetail
+from services.redis import get_cached_response, cache_response
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
@@ -139,6 +141,50 @@ async def get_request_status(
     """
     request = await get_request_or_404(request_id, current_user, db)
     return request
+
+
+@router.get("/{request_id}/response", response_model=ResponseDetail)
+async def get_request_response(
+    request_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Retrieve the complete response data for a specific request.
+    First checks Redis cache, then falls back to database if not found.
+    """
+    # بررسی وجود درخواست و دسترسی کاربر
+    request = await get_request_or_404(request_id, current_user, db, load_response=True)
+    
+    # اگر درخواست هنوز پاسخی ندارد
+    if not request.response:
+        raise HTTPException(
+            status_code=404,
+            detail="Response not available yet"
+        )
+    
+    # بررسی کش Redis
+    cached_response = get_cached_response(str(request_id))
+    if cached_response:
+        # به‌روزرسانی فیلد is_cached
+        request.response.is_cached = True
+        return request.response
+    
+    # اگر در کش نبود، از دیتابیس می‌خوانیم و در کش ذخیره می‌کنیم
+    request.response.is_cached = False
+    response_data = {
+        "id": request.response.id,
+        "request_id": request.response.request_id,
+        "result_data": request.response.result_data,
+        "result_count": request.response.result_count,
+        "execution_time_ms": request.response.execution_time_ms,
+        "received_at": request.response.received_at.isoformat(),
+        "is_cached": False,
+        "meta": request.response.meta
+    }
+    cache_response(str(request_id), response_data)
+    
+    return request.response
 
 
 @router.delete(

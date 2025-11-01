@@ -468,11 +468,11 @@
 
 ### 4.6 Response Retrieval Endpoints
 
-- [ ] `GET /requests/{request_id}/response`:
+- [x] `GET /requests/{request_id}/response`: (Done)
   - دریافت result
   - Cache check (Redis)
   - Return با metadata (execution time, etc.)
-- [ ] Response caching strategy:
+- [x] Response caching strategy: (Done)
   - Cache در Redis برای hot data (TTL: 1 hour)
   - Fallback به PostgreSQL
 - [ ] نوشتن tests
@@ -483,41 +483,10 @@
 
 ---
 
-### 4.7 API Key Management Endpoints
+### 4.7 ~~API Key Management Endpoints~~ (لغو شد)
 
-- [ ] Router `api_keys.py`
-- [ ] `POST /api-keys`:
-  - Generate new API key
-  - Specify name و scopes
-  - Return key (فقط یکبار!)
-- [ ] `GET /api-keys`:
-  - لیست API keys کاربر
-  - بدون نمایش actual key
-- [ ] `DELETE /api-keys/{key_id}`:
-  - Revoke API key
-- [ ] Key generation logic:
-  - Random secure string (32 bytes)
-  - Prefix برای identification (e.g., "pk_live_...")
-  - Hash برای storage (SHA-256)
-- [x] Router `api_keys.py` (Done)
-- [x] `POST /api-keys`: (Done)
-  - [x] Generate new API key (Done)
-  - [x] Specify name و scopes (Done)
-  - [x] Return key (فقط یکبار!) (Done)
-- [x] `GET /api-keys`: (Done)
-  - [x] لیست API keys کاربر (Done)
-  - [x] بدون نمایش actual key (Done)
-- [x] `DELETE /api-keys/{key_id}`: (Done)
-  - [x] Revoke API key (Done)
-- [x] Key generation logic: (Done)
-  - [x] Random secure string (32 bytes) (Done)
-  - [x] Prefix برای identification (e.g., "sk_live_...") (Done)
-  - [x] Hash برای storage (SHA-256) (Done)
-- [ ] نوشتن tests
-
-**وابستگی‌ها:** 4.2  
-**تخمین زمان:** 4 ساعت  
-**اولویت:** 🟡 متوسط
+استفاده از توکن‌های JWT با مدت اعتبار 1 ساعت به جای API Key.
+کاربر پس از لاگین، توکن دریافت می‌کند و باید هر 1 ساعت توکن جدید بگیرد.
 
 ---
 
