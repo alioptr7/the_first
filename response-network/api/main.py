@@ -32,7 +32,6 @@ from router.monitoring_router import router as monitoring_router
 from router.stats_router import router as stats_router
 from router.search_router import router as search_router
 from router.settings_router import router as settings_router
-from router.request_type_router import router as request_type_router
 from auth.security import get_current_user
 from router import auth_router
 
@@ -113,8 +112,6 @@ app.include_router(
 )
 # Auth router doesn't need the security scheme as it contains the login endpoint
 app.include_router(auth_router.router, prefix=settings.API_V1_STR)
-# Request type router
-app.include_router(request_type_router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
 
 
 @app.on_event("startup")

@@ -18,7 +18,6 @@ class IncomingRequest(BaseModel):
     request_type_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("request_types.id"), nullable=False)
     query_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
     elasticsearch_query: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    target_indices: Mapped[list] = mapped_column(JSONB, nullable=False, comment="List of indices actually searched")
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
