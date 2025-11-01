@@ -1,8 +1,10 @@
 """فیکسچرهای مورد نیاز برای تست‌ها"""
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import AsyncGenerator, Dict, Generator
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -13,25 +15,27 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 # --- Start of Path Fix ---
-# Add project root, shared module and api paths
-project_root = Path(__file__).resolve().parents[2]  # project root
-parent_dir = Path(__file__).resolve().parents[3]  # parent containing shared
+# Add project root and api paths
+project_root = Path(__file__).resolve().parents[1]  # project root
 api_dir = project_root / 'api'
 
-for path in [str(project_root), str(parent_dir), str(api_dir)]:
+for path in [str(project_root), str(api_dir)]:
     if path not in sys.path:
         sys.path.append(path)
 # --- End of Path Fix ---
 
+# Set testing environment variable
+os.environ["TESTING"] = "1"
+
 from api.core.config import settings
 from api.db.base import Base
 from api.db.session import get_db_session
-from api.db.models.user import User
+from api.models.user import User
 from api.main import app
 
 # ایجاد موتور دیتابیس تست
 test_engine = create_async_engine(
-    settings.TEST_DATABASE_URL,
+    settings.DATABASE_URL,
     poolclass=NullPool,
 )
 TestingSessionLocal = sessionmaker(

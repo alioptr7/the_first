@@ -2,13 +2,13 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from core.config import settings
+from api.core.config import settings
 
 # ایجاد یک موتور دیتابیس غیرهمزمان
 # pool_pre_ping=True: قبل از هر استفاده، اتصال را چک می‌کند تا از اتصالات مرده جلوگیری شود.
 async_engine = create_async_engine(
     str(settings.DATABASE_URL),
-    echo=settings.DB_ECHO_LOG,
+    echo=False,  # در محیط تست، لاگ‌های SQL را غیرفعال می‌کنیم
     pool_pre_ping=True,
 )
 

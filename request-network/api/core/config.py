@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn, model_validator
 from typing import Optional, Any
@@ -8,26 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # --- Database Settings ---
-    DB_USER: str = "user"
-    DB_PASSWORD: str = "password"
-    DB_HOST: str = "postgres-request"
-    DB_PORT: int = 5432
-    DB_NAME: str = "requests_db"
-    DB_ECHO_LOG: bool = False  # Enable SQL query logging
-    DATABASE_URL: Optional[PostgresDsn] = None
-
-    @model_validator(mode='before')
-    def assemble_db_connection(cls, v: Any) -> Any:
-        if isinstance(v, dict) and 'DATABASE_URL' not in v:
-            v['DATABASE_URL'] = str(PostgresDsn.build(
-                scheme="postgresql+asyncpg",
-                username=v.get('DB_USER'),
-                password=v.get('DB_PASSWORD'),
-                host=v.get('DB_HOST'),
-                port=int(v.get('DB_PORT')),
-                path=f"{v.get('DB_NAME') or ''}",
-            ))
-        return v
+    DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
 
     # Secret key for JWT
     SECRET_KEY: str = "change-this-secret-key"
@@ -43,7 +25,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3001"]
 
     class Config:
-        env_file = ".env"
+        env_file = ".env.test" if os.getenv("TESTING") else ".env"
         env_file_encoding = 'utf-8'
         extra = 'ignore'
 
