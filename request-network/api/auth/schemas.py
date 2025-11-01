@@ -1,3 +1,4 @@
+from typing import Optional, List
 from pydantic import BaseModel
 import uuid
 
@@ -8,6 +9,6 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
-    user_id: uuid.UUID | None = None
-    scopes: list[str] = []
+    username: Optional[str] = None
+    user_id: Optional[uuid.UUID] = None
+    scopes: List[str] = []

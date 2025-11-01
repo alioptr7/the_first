@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.session import get_db_session
-from models.user import User
+from db.models.user import User
 from models.api_key import APIKey
 from schemas.api_key import APIKeyCreate, APIKeyRead, APIKeyGenerated
 from auth.dependencies import get_current_active_user

@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from core.validation import validate_request_payload
 from db.session import get_db_session
-from models.user import User
+from db.models.user import User
 from models.request import Request
 from auth.dependencies import get_current_active_user
 # from rate_limiter import check_rate_limit  # TODO: Fix rate limiter

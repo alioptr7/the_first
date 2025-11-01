@@ -1,5 +1,7 @@
 """فیکسچرهای مورد نیاز برای تست‌ها"""
 import asyncio
+import sys
+from pathlib import Path
 from typing import AsyncGenerator, Dict, Generator
 
 import pytest
@@ -10,10 +12,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
+# --- Start of Path Fix ---
+# Add project root, shared module and api paths
+project_root = Path(__file__).resolve().parents[2]  # project root
+parent_dir = Path(__file__).resolve().parents[3]  # parent containing shared
+api_dir = project_root / 'api'
+
+for path in [str(project_root), str(parent_dir), str(api_dir)]:
+    if path not in sys.path:
+        sys.path.append(path)
+# --- End of Path Fix ---
+
 from api.core.config import settings
 from api.db.base import Base
-from api.db.session import get_session
-from api.models.user import User
+from api.db.session import get_db_session
+from api.db.models.user import User
 from api.main import app
 
 # ایجاد موتور دیتابیس تست
@@ -55,7 +68,7 @@ async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async def get_test_session():
         yield session
 
-    app.dependency_overrides[get_session] = get_test_session
+    app.dependency_overrides[get_db_session] = get_test_session
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()

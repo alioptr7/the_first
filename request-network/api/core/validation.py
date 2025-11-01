@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from schemas.request import RequestCreate
-from models.user import User
+from db.models.user import User
 from schemas.query_params import QUERY_PARAM_SCHEMAS
 
 # --- Whitelists ---

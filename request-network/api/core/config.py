@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     DB_HOST: str = "postgres-request"
     DB_PORT: int = 5432
     DB_NAME: str = "requests_db"
+    DB_ECHO_LOG: bool = False  # Enable SQL query logging
     DATABASE_URL: Optional[PostgresDsn] = None
 
     @model_validator(mode='before')

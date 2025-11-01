@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 
 from db.session import get_db_session
 from models.api_key import APIKey
-from models.user import User
+from db.models.user import User
 
 # تعریف هدر برای دریافت API Key
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)

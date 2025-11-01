@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.dependencies import require_admin
 from db.session import get_db_session
-from models.user import User
+from db.models.user import User
 from models.request import Request
 from models.batch import ExportBatch, ImportBatch
 from schemas.admin import SystemStats
