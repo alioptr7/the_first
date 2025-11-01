@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Integer, DateTime, Column, Text
+from sqlalchemy import String, Integer, DateTime, Column, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from shared.database.base import BaseModel
+from .request_type import RequestType
 
 
 class IncomingRequest(BaseModel):
@@ -14,9 +15,10 @@ class IncomingRequest(BaseModel):
     original_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True, unique=True)
     # No foreign key, it's an isolated network
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    query_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    request_type_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("request_types.id"), nullable=False)
     query_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
     elasticsearch_query: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    target_indices: Mapped[list] = mapped_column(JSONB, nullable=False, comment="List of indices actually searched")
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
@@ -29,3 +31,4 @@ class IncomingRequest(BaseModel):
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     result = relationship("QueryResult", back_populates="request", uselist=False, cascade="all, delete-orphan", lazy="joined")
+    request_type = relationship("RequestType", back_populates="requests")

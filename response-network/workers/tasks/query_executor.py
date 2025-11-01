@@ -57,12 +57,45 @@ async def execute_query_task(self, incoming_request_id: str):
             request.started_at = datetime.utcnow()
             db.commit()
 
-            query_body = es_client.build_es_query(request.query_type, request.query_params)
-            size = request.query_params.get("size", 100)
-            offset = request.query_params.get("from", 0)
-            index = request.query_params.get("index")
+            # Get request type and validate parameters
+            request_type = request.request_type
+            if not request_type:
+                logger.error(f"RequestType not found for request {incoming_request_id}")
+                request.status = "failed"
+                request.error_message = "Request type not found"
+                db.commit()
+                return
 
-            cache_key = generate_cache_key(index, query_body, size, offset)
+            # Validate required parameters
+            missing_params = [param for param in request_type.required_params if param not in request.query_params]
+            if missing_params:
+                logger.error(f"Missing required parameters for request {incoming_request_id}: {missing_params}")
+                request.status = "failed"
+                request.error_message = f"Missing required parameters: {', '.join(missing_params)}"
+                db.commit()
+                return
+
+            # Build query from template
+            query_template = request_type.query_template
+            query_body = {}
+            try:
+                # Replace placeholders in query template with actual values
+                query_str = json.dumps(query_template)
+                for param, value in request.query_params.items():
+                    query_str = query_str.replace(f"${param}", json.dumps(value))
+                query_body = json.loads(query_str)
+            except Exception as e:
+                logger.error(f"Error building query for request {incoming_request_id}: {e}")
+                request.status = "failed"
+                request.error_message = f"Error building query: {str(e)}"
+                db.commit()
+                return
+
+            size = min(request.query_params.get("size", request_type.max_results), request_type.max_results)
+            offset = request.query_params.get("from", 0)
+            indices = request_type.indices
+
+            cache_key = generate_cache_key(",".join(indices), query_body, size, offset)
             cached_result = redis_client.get(cache_key)
             cache_hit = False
             es_took_ms = None
@@ -73,12 +106,14 @@ async def execute_query_task(self, incoming_request_id: str):
                 cache_hit = True
             else:
                 logger.info(f"Cache miss for request {incoming_request_id}. Executing ES query.")
-                es_response = await es_client.execute_query(
-                    query_type=request.query_type,
-                    query_params=request.query_params,
-                    size=size,
-                    offset=offset,
-                )
+                try:
+                    es_response = await es_client.search(
+                        index=indices,
+                        body=query_body,
+                        size=size,
+                        from_=offset,
+                        request_timeout=settings.ELASTICSEARCH_QUERY_TIMEOUT,
+                    )
                 result_data = es_response
                 es_took_ms = es_response.get("took")
                 # Cache the result

@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from shared.file_format_handler import decrypt_file, verify_checksum
-from shared.schemas.transfer import RequestTransferSchema
+from shared.schemas.transfer import ResponseBatch, ResponseTransferSchema
 from workers.celery_app import celery_app
 from workers.redis_client import redis_client
 
@@ -13,9 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Directory configuration with environment variable support
-IMPORT_DIR = Path(os.getenv("RESPONSE_IMPORT_DIR", "./import/requests"))
-ARCHIVE_DIR = Path(os.getenv("RESPONSE_ARCHIVE_DIR", "./import/requests/archive"))
-FAILED_DIR = Path(os.getenv("RESPONSE_FAILED_DIR", "./import/requests/failed"))
+IMPORT_DIR = Path(os.getenv("REQUEST_IMPORT_DIR", "./import/responses"))
+ARCHIVE_DIR = Path(os.getenv("REQUEST_ARCHIVE_DIR", "./import/responses/archive"))
+FAILED_DIR = Path(os.getenv("REQUEST_FAILED_DIR", "./import/responses/failed"))
 CONFIG_IMPORT_DIR = Path(os.getenv("CONFIG_IMPORT_DIR", "./import/config"))
 
 # Ensure directories exist
@@ -71,18 +71,18 @@ def process_config_file(file_path: Path) -> bool:
             os.rename(meta_path, FAILED_DIR / meta_path.name)
         return False
 
-@celery_app.task(name="workers.tasks.import_requests.import_files")
+@celery_app.task(name="workers.tasks.import_responses.import_files")
 def import_files():
-    """Import requests and config files"""
+    """Import responses and config files"""
     logger.info("Starting import_files task...")
-    processed_files = {"requests": 0, "configs": 0}
+    processed_files = {"responses": 0, "configs": 0}
     
     # Process config files first
     for file_path in CONFIG_IMPORT_DIR.glob("*.conf"):
         if process_config_file(file_path):
             processed_files["configs"] += 1
     
-    # Process request files
+    # Process response files
     for file_path in IMPORT_DIR.glob("*.jsonl"):
         if not file_path.is_file():
             continue
@@ -98,14 +98,20 @@ def import_files():
                 continue
 
             with open(meta_path, "r") as f:
-                metadata = json.loads(f.read())
+                try:
+                    metadata = ResponseBatch.parse_raw(f.read())
+                except ValidationError as e:
+                    logger.error(f"Invalid metadata format for {file_path.name}: {e}")
+                    os.rename(file_path, FAILED_DIR / file_path.name)
+                    os.rename(meta_path, FAILED_DIR / meta_path.name)
+                    continue
 
             # Read file content
             with open(file_path, "r") as f:
                 content = f.read()
 
             # Verify checksum
-            if not verify_checksum(content.encode(), metadata["checksum"]):
+            if not verify_checksum(content.encode(), metadata.checksum):
                 logger.error(f"Checksum verification failed for {file_path.name}")
                 os.rename(file_path, FAILED_DIR / file_path.name)
                 os.rename(meta_path, FAILED_DIR / meta_path.name)
@@ -114,29 +120,29 @@ def import_files():
             # Parse and validate records
             try:
                 records = [json.loads(line) for line in content.splitlines()]
-                validated_requests = [RequestTransferSchema.parse_obj(rec) for rec in records]
+                validated_responses = [ResponseTransferSchema.parse_obj(rec) for rec in records]
             except (ValueError, ValidationError) as e:
                 logger.error(f"Failed to parse or validate file {file_path.name}: {e}")
                 os.rename(file_path, FAILED_DIR / file_path.name)
                 os.rename(meta_path, FAILED_DIR / meta_path.name)
                 continue
 
-            if not validated_requests:
+            if not validated_responses:
                 logger.warning(f"File {file_path.name} is empty or contains no valid records.")
                 os.rename(file_path, ARCHIVE_DIR / file_path.name)
                 os.rename(meta_path, ARCHIVE_DIR / meta_path.name)
                 continue
 
-            # Push requests to Redis queue for processing
-            for request in validated_requests:
-                redis_client.rpush("requests_to_process", request.json())
+            # Push responses to Redis queue for processing
+            for response in validated_responses:
+                redis_client.rpush("responses_to_process", response.json())
 
-            logger.info(f"Queued {len(validated_requests)} requests for processing")
+            logger.info(f"Queued {len(validated_responses)} responses for processing")
 
             # Archive files after successful processing
             os.rename(file_path, ARCHIVE_DIR / file_path.name)
             os.rename(meta_path, ARCHIVE_DIR / meta_path.name)
-            processed_files["requests"] += 1
+            processed_files["responses"] += 1
 
         except Exception as e:
             logger.critical(f"Unhandled error processing file {file_path.name}: {e}", exc_info=True)
@@ -145,4 +151,4 @@ def import_files():
             if meta_path.exists():
                 os.rename(meta_path, FAILED_DIR / meta_path.name)
 
-    return f"Processed {processed_files['requests']} request files and {processed_files['configs']} config files."
+    return f"Processed {processed_files['responses']} response files and {processed_files['configs']} config files."

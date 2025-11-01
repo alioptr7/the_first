@@ -43,20 +43,31 @@ class ElasticsearchClient:
             logger.error("Failed to connect to Elasticsearch cluster.")
             return False
 
-    def build_es_query(self, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
+    def build_es_query(self, request_type: Any, query_params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Builds a basic Elasticsearch query dictionary from the given type and params.
-        This is a simplified builder and will be expanded.
+        Builds a basic Elasticsearch query dictionary from the request type and params.
+        
+        Args:
+            request_type: The RequestType model instance containing query_type and template
+            query_params: The parameters for the query
         """
         # The 'index' is part of query_params but used at the search level, not in the query body.
         # We remove it to avoid it being part of the query DSL.
         params_for_dsl = query_params.copy()
         params_for_dsl.pop("index", None)
 
-        # Construct the query body based on the query type
+        # Start with the query template from the request type
+        query_template = request_type.query_template.copy()
+
+        # Replace template parameters with actual values
+        for key, value in params_for_dsl.items():
+            if key in query_template:
+                query_template[key] = value
+
+        # Construct the query body using the request type's query_type
         query_body = {
             "query": {
-                query_type: params_for_dsl
+                request_type.query_type: query_template
             }
         }
         return query_body
@@ -77,20 +88,26 @@ class ElasticsearchClient:
 
     async def execute_query(
         self,
-        query_type: str,
+        request_type: Any,
         query_params: Dict[str, Any],
         size: int = 100,
         offset: int = 0,
     ) -> Dict[str, Any]:
         """
         Validates and executes a search query against Elasticsearch.
+        
+        Args:
+            request_type: The RequestType model instance
+            query_params: The parameters for the query
+            size: Maximum number of results to return
+            offset: Starting offset for pagination
         """
         index = query_params.get("index")
         if not index:
             raise ValueError("Missing 'index' in query_params.")
 
         final_size = min(size, settings.ELASTICSEARCH_MAX_RESULT_SIZE)
-        query_body = self.build_es_query(query_type, query_params)
+        query_body = self.build_es_query(request_type, query_params)
         self.validate_query(index, query_body)
 
         logger.info(f"Executing query on index '{index}' with size {final_size}.")
