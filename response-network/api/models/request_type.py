@@ -46,14 +46,10 @@ class RequestType(BaseModel):
 
     # Response configuration
     response_template: Mapped[dict | None] = mapped_column(JSONB, nullable=True, comment="الگوی تبدیل پاسخ الستیک‌سرچ")
-
-    # Relationships
-    parameters = relationship("RequestTypeParameter", back_populates="request_type", cascade="all, delete-orphan")
-    access_rules = relationship("RequestTypeAccess", back_populates="request_type", cascade="all, delete-orphan")
     error_templates: Mapped[dict | None] = mapped_column(JSONB, nullable=True, comment="الگوهای پاسخ برای خطاهای مختلف")
 
     # Relationships
+    parameters = relationship("RequestTypeParameter", back_populates="request_type", cascade="all, delete-orphan")
     created_by = relationship("User", back_populates="created_request_types")
     requests = relationship("IncomingRequest", back_populates="request_type")
-    parameters = relationship("RequestTypeParameter", back_populates="request_type", cascade="all, delete-orphan")
     user_access = relationship("UserRequestAccess", back_populates="request_type", cascade="all, delete-orphan")

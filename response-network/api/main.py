@@ -184,14 +184,62 @@ async def worker_stats():
         logger.error(f"Could not get worker stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Could not inspect Celery workers: {e}")
 
-@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["monitoring"], dependencies=[Depends(oauth2_scheme)])
+"""
+Response Network API
+"""
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+import redis
+import logging
+
+from core.config import settings
+from core.database import get_db
+from router import auth_router, request_router, monitoring_router
+
+# Configure logging
+logging.basicConfig(level=settings.LOG_LEVEL)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
+
+# Set up CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(auth_router.router, prefix=settings.API_V1_STR)
+app.include_router(request_router.router, prefix=settings.API_V1_STR)
+app.include_router(monitoring_router.router, prefix=settings.API_V1_STR)
+
+@app.get("/")
+async def root():
+    """
+    Root endpoint - returns basic API info
+    """
+    return {
+        "name": settings.PROJECT_NAME,
+        "version": "1.0.0",
+        "description": "Response Network API for handling search requests"
+    }
+
+@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["monitoring"], dependencies=[Depends(auth_router.oauth2_scheme)])
 async def cache_stats():
     """
     Gets statistics about the Redis cache, including memory usage and hit/miss ratio.
     """
     try:
         # Use decode_responses=True to get strings instead of bytes
-        redis_client = redis.from_url(str(settings.REDIS_URL), decode_responses=True)
+        redis_client = redis.from_url(str(settings.REDIS_CONNECTION_URL()), decode_responses=True)
         info = redis_client.info()
 
         hits = int(info.get("keyspace_hits", 0))

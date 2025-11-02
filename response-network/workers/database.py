@@ -1,11 +1,11 @@
+"""تنظیمات پایگاه داده برای شبکه پاسخ"""
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# TODO: This should be read from worker settings
-DATABASE_URL = "postgresql+psycopg://user:password@postgres-response:5432/response_db"
+from workers.config import settings
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(settings.RESPONSE_DB_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @contextmanager
@@ -20,3 +20,9 @@ def db_session_scope():
         raise
     finally:
         session.close()
+
+@contextmanager
+def get_db_session():
+    """Get a database session for use in tasks."""
+    with db_session_scope() as session:
+        yield session

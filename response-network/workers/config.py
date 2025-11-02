@@ -1,39 +1,43 @@
+"""تنظیمات شبکه پاسخ"""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import RedisDsn, PostgresDsn
 
 
+"""تنظیمات برنامه"""
+from pydantic_settings import BaseSettings
+
 class Settings(BaseSettings):
-    """
-    Configuration settings for the Celery workers in the Response Network.
-    """
-    PROJECT_NAME: str = "Response Network Workers"
+    """تنظیمات برنامه"""
+    # تنظیمات پایگاه داده
+    RESPONSE_DB_USER: str = "user"
+    RESPONSE_DB_PASSWORD: str = "password"
+    RESPONSE_DB_HOST: str = "localhost"
+    RESPONSE_DB_PORT: str = "5433"
+    RESPONSE_DB_NAME: str = "response_db"
 
-    # --- Database Settings (needed for worker to connect to DB) ---
-    RESPONSE_DB_USER: str
-    RESPONSE_DB_PASSWORD: str
-    RESPONSE_DB_HOST: str
-    RESPONSE_DB_PORT: int
-    RESPONSE_DB_NAME: str
+    # تنظیمات Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6380
+    REDIS_DB: int = 0
 
-    # Redis URL for Celery broker and backend
-    REDIS_URL: RedisDsn = "redis://localhost:6379/0"
-
-    # Task-specific settings
-    EXPORT_SCHEDULE_SECONDS: int = 120  # 2 minutes
-    IMPORT_POLL_SECONDS: int = 30
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"  # Ignore extra fields from .env file
-    )
+    # تنظیمات شبکه درخواست
+    REQUEST_NETWORK_API_URL: str = "http://localhost:8000"
+    REQUEST_NETWORK_API_KEY: str = "your-api-key-here"
 
     @property
-    def celery_broker_url(self) -> str:
-        return str(self.REDIS_URL)
+    def RESPONSE_DB_URL(self) -> str:
+        """آدرس اتصال به پایگاه داده"""
+        return f"postgresql+psycopg2://{self.RESPONSE_DB_USER}:{self.RESPONSE_DB_PASSWORD}@{self.RESPONSE_DB_HOST}:{self.RESPONSE_DB_PORT}/{self.RESPONSE_DB_NAME}"
 
     @property
-    def celery_result_backend(self) -> str:
-        return str(self.REDIS_URL)
+    def REDIS_URL(self) -> str:
+        """آدرس اتصال به Redis"""
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    class Config:
+        """تنظیمات مدل"""
+        env_file = ".env"
+        case_sensitive = True
+        extra = "allow"
 
 settings = Settings()

@@ -191,6 +191,10 @@ async def get_request_response(
     "/{request_id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
+@router.post(
+    "/{request_id}/cancel",
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def cancel_request(
     request_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],

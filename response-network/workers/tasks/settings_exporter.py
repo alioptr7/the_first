@@ -4,30 +4,19 @@ from datetime import datetime
 from typing import Dict, Any, List
 import httpx
 
-from sqlalchemy import select, Column, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB
-
 from workers.celery_app import celery_app
 from workers.database import get_db_session
 from workers.config import settings
-from api.models.user import User
-from api.models.user_request_access import UserRequestAccess
-from api.models.request_type import RequestType
-from api.models.export_settings import ExportableSettings
+from shared.models import User, UserRequestAccess, RequestType, ExportableSettings
 
-# اضافه کردن فیلد last_exported_at به مدل User
-if not hasattr(User, 'last_exported_at'):
-    User.last_exported_at = Column(DateTime(timezone=True), nullable=True)
-    User.settings_hash = Column(JSONB, nullable=True)
-
-def get_exportable_settings(db) -> Dict[str, ExportableSettings]:
+def get_exportable_settings(db) -> Dict[str, Any]:
     """دریافت تنظیمات قابل صادرات"""
     settings = db.query(ExportableSettings).filter(
         ExportableSettings.is_exportable == True
     ).all()
     return {s.setting_key: s for s in settings}
 
-def calculate_settings_hash(user: User, access_rules: List[UserRequestAccess], exportable_settings: Dict[str, ExportableSettings]) -> Dict[str, Any]:
+def calculate_settings_hash(user: User, access_rules: List[UserRequestAccess], exportable_settings: Dict[str, Any]) -> Dict[str, Any]:
     """محاسبه هش تنظیمات برای تشخیص تغییرات"""
     settings_data = {"user": {}}
     
@@ -97,6 +86,8 @@ def export_settings_to_request_network(force_export: bool = False) -> Dict[str, 
                     # ساخت داده‌های کاربر برای صادرات (فقط موارد مجاز)
                     user_data = {
                         "user_id": str(user.id),
+                        "username": user.username,
+                        "email": user.email,
                         "updated_at": datetime.utcnow().isoformat(),
                         "access_rules": access_data
                     }

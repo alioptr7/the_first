@@ -2,7 +2,7 @@ import redis
 from .config import settings
 
 # Create a Redis connection pool
-redis_pool = redis.ConnectionPool.from_url(str(settings.REDIS_URL), decode_responses=True)
+redis_pool = redis.ConnectionPool.from_url(str(settings.REDIS_CONNECTION_URL()), decode_responses=True)
 
 def get_redis_client():
     """

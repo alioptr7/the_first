@@ -2,7 +2,7 @@
 from celery import Celery
 from celery.schedules import crontab
 
-from config import settings
+from workers.config import settings
 
 celery_app = Celery(
     "request_network",
@@ -22,17 +22,16 @@ celery_app.conf.update(
 # برنامه زمان‌بندی تسک‌ها
 celery_app.conf.beat_schedule = {
     "process_requests": {
-        "task": "process_request_from_redis",
+        "task": "workers.tasks.request_processor.process_request_from_redis",
         "schedule": 30.0,  # هر 30 ثانیه
     },
     "process_responses": {
-        "task": "process_response_from_redis",
+        "task": "workers.tasks.response_processor.process_response_from_redis",
         "schedule": 30.0,  # هر 30 ثانیه
     }
 }
 
 # بارگذاری تسک‌ها
 celery_app.autodiscover_tasks([
-    "tasks.request_processor",
-    "tasks.response_processor"
+    "workers.tasks"
 ])

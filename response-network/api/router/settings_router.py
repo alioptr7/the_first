@@ -18,6 +18,7 @@ from schemas.settings import (
     UserSettingUpdate,
     UserSettingRead
 )
+from workers.tasks.settings_exporter import export_settings_to_request_network
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -165,19 +166,9 @@ async def update_user_setting(
     return db_user_setting
 
 
-"""روتر تنظیمات"""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
-from api.auth.dependencies import get_current_admin_user
-from db.session import get_db
-from workers.tasks.settings_exporter import export_settings_to_request_network
-
-router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
-
 @router.post("/export", status_code=202)
-def trigger_settings_export(
-    db: Session = Depends(get_db),
+async def trigger_settings_export(
+    db: AsyncSession = Depends(get_db_session),
     _: dict = Depends(get_current_admin_user)
 ):
     """صادرات دستی تنظیمات به شبکه درخواست"""

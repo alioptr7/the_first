@@ -1,22 +1,36 @@
+"""تنظیمات شبکه درخواست"""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import RedisDsn, PostgresDsn
 
 
 class Settings(BaseSettings):
-    """
-    Configuration settings for the Celery workers in the Request Network.
-    """
+    """تنظیمات برنامه"""
     PROJECT_NAME: str = "Request Network Workers"
 
-    # --- Database Settings (needed for worker to connect to DB) ---
+    # تنظیمات پایگاه داده
     REQUEST_DB_USER: str
     REQUEST_DB_PASSWORD: str
     REQUEST_DB_HOST: str
     REQUEST_DB_PORT: int
     REQUEST_DB_NAME: str
 
-    # Redis URL for Celery broker and backend
-    REDIS_URL: RedisDsn = "redis://redis-request:6379/0"
+    @property
+    def REQUEST_DB_URL(self) -> str:
+        """ساخت URL اتصال به پایگاه داده"""
+        return (
+            f"postgresql://{self.REQUEST_DB_USER}:{self.REQUEST_DB_PASSWORD}"
+            f"@{self.REQUEST_DB_HOST}:{self.REQUEST_DB_PORT}/{self.REQUEST_DB_NAME}"
+        )
+
+    # تنظیمات Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+
+    @property
+    def REDIS_URL(self) -> str:
+        """ساخت URL اتصال به Redis"""
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     # Task-specific settings
     EXPORT_SCHEDULE_SECONDS: int = 120  # 2 minutes
@@ -35,5 +49,6 @@ class Settings(BaseSettings):
     @property
     def celery_result_backend(self) -> str:
         return str(self.REDIS_URL)
+
 
 settings = Settings()
