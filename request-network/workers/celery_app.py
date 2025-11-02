@@ -2,12 +2,12 @@
 from celery import Celery
 from celery.schedules import crontab
 
-from workers.config import settings
+from config import settings
 
 celery_app = Celery(
     "request_network",
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND
+    broker=str(settings.REDIS_URL),
+    backend=str(settings.REDIS_URL)
 )
 
 # تنظیمات Celery
@@ -33,6 +33,6 @@ celery_app.conf.beat_schedule = {
 
 # بارگذاری تسک‌ها
 celery_app.autodiscover_tasks([
-    "workers.tasks.request_processor",
-    "workers.tasks.response_processor"
+    "tasks.request_processor",
+    "tasks.response_processor"
 ])

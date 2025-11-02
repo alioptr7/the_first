@@ -7,7 +7,7 @@ import logging
 
 from models.schemas import SystemStats, SystemHealth, LogEntry
 from models.request import Request
-from workers.elasticsearch_client import ElasticsearchClient
+from core.elasticsearch_client import ElasticsearchClient
 
 async def get_system_stats(db: AsyncSession) -> SystemStats:
     """Get current system resource usage and performance metrics."""

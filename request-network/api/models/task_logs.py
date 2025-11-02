@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Column, String, DateTime, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, JSONB
 
-from api.db.base_class import Base
+from db.base_class import Base
 
 
 class TaskLogs(Base):

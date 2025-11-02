@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Redis URL (for Celery stats)
-    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # Elasticsearch URL for monitoring
     # ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200" # Not used in Request Network

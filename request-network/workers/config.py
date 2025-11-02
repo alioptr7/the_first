@@ -28,4 +28,12 @@ class Settings(BaseSettings):
         extra="ignore"  # Ignore extra fields from .env file
     )
 
+    @property
+    def celery_broker_url(self) -> str:
+        return str(self.REDIS_URL)
+
+    @property
+    def celery_result_backend(self) -> str:
+        return str(self.REDIS_URL)
+
 settings = Settings()

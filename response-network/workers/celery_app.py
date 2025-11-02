@@ -2,12 +2,12 @@
 from celery import Celery
 from celery.schedules import crontab
 
-from workers.config import settings
+from config import settings
 
 celery_app = Celery(
     "response_network",
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND
+    broker=str(settings.REDIS_URL),
+    backend=str(settings.REDIS_URL)
 )
 
 # تنظیمات Celery
@@ -21,13 +21,18 @@ celery_app.conf.update(
 
 # برنامه زمان‌بندی تسک‌ها
 celery_app.conf.beat_schedule = {
-    "export_settings": {
-        "task": "export_settings_to_request_network",
-        "schedule": crontab(minute="*/5"),  # هر 5 دقیقه
+    "process_requests": {
+        "task": "process_request_from_redis",
+        "schedule": 30.0,  # هر 30 ثانیه
+    },
+    "process_responses": {
+        "task": "process_response_from_redis",
+        "schedule": 30.0,  # هر 30 ثانیه
     }
 }
 
 # بارگذاری تسک‌ها
 celery_app.autodiscover_tasks([
-    "workers.tasks.settings_exporter"
+    "tasks.request_processor",
+    "tasks.response_processor"
 ])

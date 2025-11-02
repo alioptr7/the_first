@@ -56,13 +56,13 @@ class Settings(BaseSettings):
     REDIS_URL: RedisDsn = "redis://localhost:6379/0"
 
     # Elasticsearch URL for monitoring
-    ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"
+    ELASTICSEARCH_URL: str = "http://localhost:9200"
     
     # CORS
     # With Caddy as a reverse proxy, requests are same-origin, so complex CORS is not needed.
     # For Cloud Shell development, we need to explicitly allow the frontend's preview URL.
     # Example: ["https://3000-....cloudshell.dev"]
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["https://3001-cs-486191814526-default.cs-europe-west4-pear.cloudshell.dev/"]
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     class Config:
         # env_file = ".env" # Temporarily disable .env loading to bypass persistent parsing issues

@@ -19,7 +19,7 @@ router = APIRouter(
 async def search(
     query: QueryRequest,
     request_type_id: str | None = None,
-    current_user: User = Depends(check_index_access(indices=query.indices, request_type_id=request_type_id)),
+    current_user: User = Depends(get_current_active_user),
     _: User = Depends(check_user_limits),
     db: AsyncSession = Depends(get_db)
 ) -> QueryResponse:

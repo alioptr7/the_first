@@ -5,8 +5,8 @@ import jwt
 from sqlalchemy import Boolean, Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 
-from api.core.config import settings
-from api.db.base_class import Base
+from core.config import settings
+from db.base_class import Base
 
 
 class User(Base):

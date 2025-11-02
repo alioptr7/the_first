@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from api.auth.dependencies import get_current_user, require_admin
+from auth.dependencies import get_current_user, get_current_admin_user
 from api.db.session import get_db
 from api.models.user import User
 from api.models.user_request_access import UserRequestAccess
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/user-request-access", tags=["user-request-access"])
 async def create_user_request_access(
     user_id: UUID,
     access: UserRequestAccessCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """ایجاد دسترسی جدید برای کاربر به یک نوع درخواست"""
@@ -99,7 +99,7 @@ async def list_user_request_access(
 async def update_user_request_access(
     access_id: UUID,
     access_update: UserRequestAccessUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """به‌روزرسانی دسترسی کاربر"""
@@ -140,7 +140,7 @@ async def update_user_request_access(
 @router.delete("/{access_id}")
 async def delete_user_request_access(
     access_id: UUID,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """حذف دسترسی کاربر"""

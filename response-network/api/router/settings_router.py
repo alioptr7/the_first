@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth.dependencies import get_current_active_user, require_admin
+from auth.dependencies import get_current_active_user, get_current_admin_user
 from db.session import get_db_session
 from models.settings import Settings, UserSettings
 from models.user import User
@@ -22,7 +22,7 @@ from schemas.settings import (
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
 # System Settings Endpoints (Admin Only)
-@router.post("/", response_model=SettingRead, dependencies=[Depends(require_admin)])
+@router.post("/", response_model=SettingRead, dependencies=[Depends(get_current_admin_user)])
 async def create_setting(
     setting: SettingCreate,
     db: AsyncSession = Depends(get_db_session),
@@ -67,7 +67,7 @@ async def get_setting(
         raise HTTPException(status_code=404, detail="Setting not found")
     return setting
 
-@router.put("/{setting_id}", response_model=SettingRead, dependencies=[Depends(require_admin)])
+@router.put("/{setting_id}", response_model=SettingRead, dependencies=[Depends(get_current_admin_user)])
 async def update_setting(
     setting_id: UUID,
     setting_update: SettingUpdate,
@@ -170,7 +170,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.auth.dependencies import get_current_admin_user
-from api.db.session import get_db
+from db.session import get_db
 from workers.tasks.settings_exporter import export_settings_to_request_network
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
