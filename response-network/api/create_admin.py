@@ -10,11 +10,9 @@ async def create_admin_user():
     async with async_session() as session:
         admin_user = User(
             id=uuid.uuid4(),
-            username="admin2",
-            email="admin2@example.com",
+            username="admin",
+            email="admin@example.com",
             hashed_password=get_password_hash("admin123"),
-            full_name="Admin User",
-            profile_type="admin",
             is_active=True
         )
         session.add(admin_user)

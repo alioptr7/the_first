@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from core.config import settings
 
 engine = create_async_engine(
-    str(settings.RESPONSE_DB_URL),
+    str(settings.DATABASE_CONNECTION_URL),
     pool_pre_ping=True,
     echo=False,  # Set to True for debugging SQL queries
 )

@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
 
     @property
-    def RESPONSE_DB_URL(self) -> str:
-        """Database connection URL"""
+    def DATABASE_CONNECTION_URL(self) -> str:
+        """آدرس اتصال به پایگاه داده"""
         self.DATABASE_URL = f"postgresql+asyncpg://{self.RESPONSE_DB_USER}:{self.RESPONSE_DB_PASSWORD}@{self.RESPONSE_DB_HOST}:{self.RESPONSE_DB_PORT}/{self.RESPONSE_DB_NAME}"
         return self.DATABASE_URL
 
@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     ELASTICSEARCH_HOST: str = "localhost"
     ELASTICSEARCH_PORT: int = 9200
     ELASTICSEARCH_URL: str = ""
+    ELASTICSEARCH_QUERY_TIMEOUT: int = 30  # زمان انتظار برای پاسخ به ثانیه
+    ELASTICSEARCH_MAX_RESULT_SIZE: int = 1000  # حداکثر تعداد نتایج
 
     @property
     def ELASTICSEARCH_CONNECTION_URL(self) -> str:
@@ -58,6 +60,9 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="allow"  # اجازه فیلدهای اضافی
     )
+
+settings = Settings()
 
 settings = Settings()

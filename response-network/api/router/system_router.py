@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from core.dependencies import get_db
+from db.session import get_db_session as get_db
 from models.schemas import SystemStats, SystemHealth, LogEntry
 from models.user import User
 from auth.dependencies import get_current_user, get_current_admin_user
@@ -21,7 +21,19 @@ async def get_system_stats(
     """
     return await system_service.get_system_stats(db)
 
-@router.get("/system/health", response_model=SystemHealth, dependencies=[])  # Empty dependencies to override the global security
+from datetime import datetime
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends
+from core.elasticsearch_client import ElasticsearchClient
+from db.session import get_db_session as get_db
+from models.system import SystemHealth
+import logging
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api", tags=["system"])
+
+@router.get("/health", response_model=SystemHealth, dependencies=[])  # Empty dependencies to override the global security
 async def get_system_health(
     db: AsyncSession = Depends(get_db)
 ):
@@ -29,7 +41,42 @@ async def get_system_health(
     Get basic health status of the system. This endpoint is public and does not require authentication.
     Used by monitoring services and load balancers.
     """
-    return await system_service.get_system_health(db, detailed=False)
+    try:
+        # بررسی اتصال به پایگاه داده
+        await db.execute(text("SELECT 1"))
+        db_status = "healthy"
+    except Exception as e:
+        logger.error(f"Database health check failed: {str(e)}")
+        db_status = "down"
+
+    # بررسی اتصال به Elasticsearch
+    es_client = ElasticsearchClient()
+    try:
+        if await es_client.check_health():
+            es_status = "healthy"
+        else:
+            es_status = "down"
+    except Exception as e:
+        logger.error(f"Elasticsearch health check failed: {str(e)}")
+        es_status = "down"
+    finally:
+        await es_client.close_connection()
+
+    # تعیین وضعیت کلی سیستم
+    overall_status = "down" if "down" in [db_status, es_status] else "healthy"
+
+    return SystemHealth(
+        status=overall_status,
+        components={
+            "database": db_status,
+            "elasticsearch": es_status
+        },
+        components_stats={
+            "database": {"status": db_status},
+            "elasticsearch": {"status": es_status}
+        },
+        last_check=datetime.utcnow()
+    )
 
 @router.get("/system/health/detailed", response_model=SystemHealth)
 async def get_detailed_system_health(

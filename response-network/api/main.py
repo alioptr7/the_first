@@ -24,7 +24,7 @@ if str(api_root) not in sys.path:
 # --- End of Path Fix ---
 
 from core.config import settings
-from db.session import get_db_session
+from db.session import get_db_session as get_db
 from router.request_router import router as request_router
 from router.system_router import router as system_router
 from router.user_router import router as user_router
@@ -117,7 +117,9 @@ app.include_router(auth_router.router, prefix=settings.API_V1_STR)
 @app.on_event("startup")
 async def startup_event():
     logger.info("Monitoring API startup...")
-async def detailed_health_check(db: AsyncSession = Depends(get_db_session)):
+
+@app.get(f"{settings.API_V1_STR}/health/detailed", tags=["monitoring"])
+async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     """
     Performs a detailed health check on critical services.
     """
@@ -187,39 +189,6 @@ async def worker_stats():
 """
 Response Network API
 """
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.asyncio import AsyncSession
-import redis
-import logging
-
-from core.config import settings
-from core.database import get_db
-from router import auth_router, request_router, monitoring_router
-
-# Configure logging
-logging.basicConfig(level=settings.LOG_LEVEL)
-logger = logging.getLogger(__name__)
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
-
-# Set up CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include routers
-app.include_router(auth_router.router, prefix=settings.API_V1_STR)
-app.include_router(request_router.router, prefix=settings.API_V1_STR)
-app.include_router(monitoring_router.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
@@ -232,7 +201,7 @@ async def root():
         "description": "Response Network API for handling search requests"
     }
 
-@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["monitoring"], dependencies=[Depends(auth_router.oauth2_scheme)])
+@app.get(f"{settings.API_V1_STR}/stats/cache", tags=["monitoring"], dependencies=[Depends(oauth2_scheme)])
 async def cache_stats():
     """
     Gets statistics about the Redis cache, including memory usage and hit/miss ratio.

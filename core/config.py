@@ -29,8 +29,22 @@ class Settings(BaseSettings):
     DATABASE_URL: PostgresDsn
     DB_ECHO_LOG: bool = False
 
+    # Redis settings
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # JWT Settings
+    SECRET_KEY: str = "your-secret-key-change-this-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRY_MINUTES: int = 60
+
+    # Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+
     model_config = SettingsConfigDict(
-        case_sensitive=True, env_file=".env", env_file_encoding="utf-8"
+        case_sensitive=True,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="allow"  # Allow extra fields from .env file
     )
 
 

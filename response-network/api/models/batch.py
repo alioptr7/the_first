@@ -21,20 +21,12 @@ class BaseBatch(BaseModel):
 
 
 class ExportBatch(BaseBatch):
-    __tablename__ = "response_export_batches"
-
-
-class ImportBatch(BaseBatch):
-    __tablename__ = "response_import_batches"
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-
-
-class ExportBatch(BaseBatch):
     __tablename__ = "export_batches"
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ImportBatch(BaseBatch):
     __tablename__ = "import_batches"
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
