@@ -6,14 +6,16 @@ from unittest.mock import patch
 import pytest
 from fastapi import status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.request import Request
 from api.models.response import Response
+from api.models.user import User
 from api.services.redis_service import RESPONSE_CACHE_PREFIX
 
 
 @pytest.fixture
-def sample_request(db_session, test_user):
+def sample_request(db_session: AsyncSession, test_user: User):
     """ایجاد یک درخواست نمونه در دیتابیس"""
     request = Request(
         id=uuid.uuid4(),

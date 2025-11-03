@@ -1,159 +1,179 @@
-"""فیکسچرهای مورد نیاز برای تست‌ها"""
 import asyncio
-import os
-import sys
-from pathlib import Path
-from typing import AsyncGenerator, Dict, Generator
-from unittest.mock import patch
+from typing import AsyncGenerator, Generator
+from datetime import timedelta
 
 import pytest
-import pytest_asyncio
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
-
-# --- Start of Path Fix ---
-# Add project root and api paths
-project_root = Path(__file__).resolve().parents[1]  # project root
-api_dir = project_root / 'api'
-
-for path in [str(project_root), str(api_dir)]:
-    if path not in sys.path:
-        sys.path.append(path)
-# --- End of Path Fix ---
-
-# Set testing environment variable
-os.environ["TESTING"] = "1"
 
 from api.core.config import settings
-from api.db.base import Base
-from api.db.session import get_db_session
+from api.db.session import get_db
+from api.main import app as main_app
 from api.models.user import User
-from api.main import app
+from api.auth.security import create_access_token, get_password_hash
+from api.db.base_class import Base
 
-# ایجاد موتور دیتابیس تست
-test_engine = create_async_engine(
-    settings.DATABASE_URL,
-    poolclass=NullPool,
-)
+# Create a new asynchronous engine for the test database
+engine = create_async_engine(settings.TEST_DATABASE_URI, echo=True)
+
+# Create a new sessionmaker for the test database
 TestingSessionLocal = sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
+    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
 )
 
 
 @pytest.fixture(scope="session")
-def event_loop(request) -> Generator:
-    """ایجاد event loop برای تست‌های async"""
+def event_loop() -> Generator:
+    """
+    Creates an instance of the default event loop for each test session.
+    """
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="function")
-async def session() -> AsyncGenerator[AsyncSession, None]:
-    """فیکسچر جلسه دیتابیس تست"""
-    async with test_engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-        async with TestingSessionLocal(bind=connection) as session:
-            yield session
-            await session.rollback()
-        await connection.run_sync(Base.metadata.drop_all)
+@pytest.fixture(scope="session", autouse=True)
+async def setup_database():
+    """
+    Create the database schema before running tests.
+    """
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest_asyncio.fixture
-async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """فیکسچر کلاینت تست"""
-    async def get_test_session():
-        yield session
+@pytest.fixture
+async def app() -> AsyncGenerator[FastAPI, None]:
+    """
+    Fixture to provide the FastAPI app.
+    """
+    yield main_app
 
-    app.dependency_overrides[get_db_session] = get_test_session
+
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
+    """
+    Fixture to provide an async test client.
+    """
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
-    app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture
-async def admin_user(session: AsyncSession) -> User:
-    """فیکسچر کاربر ادمین"""
-    admin = User(
-        username="admin",
-        email="admin@example.com",
-        hashed_password="test_hash",
-        is_admin=True
-    )
-    session.add(admin)
-    await session.commit()
-    await session.refresh(admin)
-    return admin
+@pytest.fixture
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Fixture to provide a database session.
+    """
+    async with TestingSessionLocal() as session:
+        yield session
 
 
-@pytest_asyncio.fixture
-async def normal_user(session: AsyncSession) -> User:
-    """فیکسچر کاربر عادی"""
+@pytest.fixture
+async def test_user(db_session: AsyncSession) -> User:
+    """
+    Fixture to create a test user.
+    """
     user = User(
-        username="user",
-        email="user@example.com",
-        hashed_password="test_hash",
-        is_admin=False
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password=get_password_hash("testpassword"),
+        is_active=True,
     )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     return user
 
 
 @pytest.fixture
-def normal_user_token(normal_user: User) -> Dict[str, str]:
-    """فیکسچر توکن کاربر عادی"""
-    return {"Authorization": f"Bearer {normal_user.generate_token()}"}
-
-
-@pytest_asyncio.fixture
-async def test_user(session: AsyncSession) -> User:
-    """فیکسچر کاربر تست"""
+async def other_user(db_session: AsyncSession) -> User:
+    """
+    Fixture to create another test user.
+    """
     user = User(
-        username="test_user",
-        email="test@example.com",
-        hashed_password="test_hash",
-        is_admin=False
+        username="otheruser",
+        email="otheruser@example.com",
+        hashed_password=get_password_hash("otherpassword"),
+        is_active=True,
     )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-    # اضافه کردن توکن به کاربر برای استفاده راحت‌تر در تست‌ها
-    user.token = user.generate_token()
-    return user
-
-
-@pytest_asyncio.fixture
-async def other_user(session: AsyncSession) -> User:
-    """فیکسچر کاربر دیگر برای تست دسترسی‌ها"""
-    user = User(
-        username="other_user",
-        email="other@example.com",
-        hashed_password="test_hash",
-        is_admin=False
-    )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-    # اضافه کردن توکن به کاربر برای استفاده راحت‌تر در تست‌ها
-    user.token = user.generate_token()
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     return user
 
 
 @pytest.fixture
-def redis_client():
-    """فیکسچر Redis برای تست‌های کش"""
-    import fakeredis
-    redis_client = fakeredis.FakeStrictRedis()
-    
-    # پچ کردن کلاینت Redis در سرویس
-    with patch('api.services.redis_service.redis_client', redis_client):
-        yield redis_client
+async def admin_user(db_session: AsyncSession) -> User:
+    """
+    Fixture to create an admin user.
+    """
+    user = User(
+        username="adminuser",
+        email="adminuser@example.com",
+        hashed_password=get_password_hash("adminpassword"),
+        is_active=True,
+        is_superuser=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def admin_token(admin_user: User) -> dict[str, str]:
+    """
+    Fixture to provide an admin user's token.
+    """
+    token = create_access_token(
+        data={"sub": admin_user.email}, expires_delta=timedelta(minutes=15)
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def expired_admin_token(admin_user: User) -> dict[str, str]:
+    """
+    Fixture to provide an expired admin user's token.
+    """
+    token = create_access_token(
+        data={"sub": admin_user.email}, expires_delta=timedelta(minutes=-1)
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def non_admin_token(test_user: User) -> dict[str, str]:
+    """
+    Fixture to provide a non-admin user's token.
+    """
+    token = create_access_token(
+        data={"sub": test_user.email}, expires_delta=timedelta(minutes=15)
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def test_user_token(test_user: User) -> dict[str, str]:
+    """
+    Fixture to provide a test user's token.
+    """
+    token = create_access_token(
+        data={"sub": test_user.email}, expires_delta=timedelta(minutes=15)
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def other_user_token(other_user: User) -> dict[str, str]:
+    """
+    Fixture to provide another test user's token.
+    """
+    token = create_access_token(
+        data={"sub": other_user.email}, expires_delta=timedelta(minutes=15)
+    )
+    return {"Authorization": f"Bearer {token}"}

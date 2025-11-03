@@ -1,4 +1,4 @@
-from .task_logs import TaskLogs
-from .user import User
+"""Models package"""
+from .task_logs import TaskLog
 
-__all__ = ["TaskLogs", "User"]
+__all__ = ["TaskLog"]

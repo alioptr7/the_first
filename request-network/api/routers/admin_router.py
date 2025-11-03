@@ -1,60 +1,78 @@
-from typing import Annotated
+"""Admin router module"""
+from typing import List
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import func, case, select
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.dependencies import require_admin
-from db.session import get_db_session
-from db.models.user import User
-from models.request import Request
-from models.batch import ExportBatch, ImportBatch
-from schemas.admin import SystemStats
+from api.auth.dependencies import get_current_admin_user
+from api.core.config import settings
+from api.db.session import get_db
+from api.models.user import User
+from api.schemas.user import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(
     prefix="/admin",
-    tags=["Admin"],
-    dependencies=[Depends(require_admin)] # این خط تمام اندپوینت‌های این روتر را محافظت می‌کند
+    tags=["admin"],
+    dependencies=[Depends(get_current_admin_user)],
 )
 
 
-@router.get("/stats", response_model=SystemStats)
-async def get_system_stats(
-    db: Annotated[AsyncSession, Depends(get_db_session)]
+@router.get("/users", response_model=List[UserResponse])
+async def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    Retrieves overall statistics for the system.
-    - User counts (total, active)
-    - Request counts by status
-    - Batch counts (import/export)
-    """
-    # 1. Get user stats
-    user_stats_stmt = select(
-        func.count(User.id).label("total_users"),
-        func.count(case((User.is_active, 1))).label("active_users")
+    """List all users"""
+    query = await db.execute(
+        User.__table__.select().offset(skip).limit(limit)
     )
-    user_stats_result = (await db.execute(user_stats_stmt)).one()
+    users = query.fetchall()
+    return [UserResponse.from_orm(user) for user in users]
 
-    # 2. Get request stats
-    request_stats_stmt = select(
-        func.count(Request.id).label("total_requests"),
-        func.count(case((Request.status == 'pending', 1))).label("pending_requests"),
-        func.count(case((Request.status == 'completed', 1))).label("completed_requests"),
-        func.count(case((Request.status == 'failed', 1))).label("failed_requests"),
-    )
-    request_stats_result = (await db.execute(request_stats_stmt)).one()
 
-    # 3. Get batch stats
-    export_batch_count = await db.scalar(select(func.count(ExportBatch.id)))
-    import_batch_count = await db.scalar(select(func.count(ImportBatch.id)))
+@router.post("/users", response_model=UserResponse)
+async def create_user(
+    user: UserCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new user"""
+    db_user = User(**user.dict())
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
 
-    return SystemStats(
-        total_users=user_stats_result.total_users,
-        active_users=user_stats_result.active_users,
-        total_requests=request_stats_result.total_requests,
-        pending_requests=request_stats_result.pending_requests,
-        completed_requests=request_stats_result.completed_requests,
-        failed_requests=request_stats_result.failed_requests,
-        total_export_batches=export_batch_count or 0,
-        total_import_batches=import_batch_count or 0,
-    )
+
+@router.put("/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: int,
+    user: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a user"""
+    db_user = await db.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    for field, value in user.dict(exclude_unset=True).items():
+        setattr(db_user, field, value)
+    
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a user"""
+    db_user = await db.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.delete(db_user)
+    await db.commit()
+    return None

@@ -7,13 +7,14 @@ from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from shared.database.base import BaseModel
+from api.db.base_class import Base
 
 
-class SystemMetrics(BaseModel):
+class SystemMetrics(Base):
     """مدل برای ذخیره متریک‌های سیستمی"""
     __tablename__ = "system_metrics"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     metric_name: Mapped[str] = mapped_column(String(100), nullable=False)
     metric_value: Mapped[float] = mapped_column(Float, nullable=False)
     metric_type: Mapped[str] = mapped_column(String(50), nullable=False)  # gauge, counter, histogram
@@ -24,10 +25,11 @@ class SystemMetrics(BaseModel):
         return f"<SystemMetrics(metric_name={self.metric_name}, value={self.metric_value})>"
 
 
-class ServiceHealth(BaseModel):
+class ServiceHealth(Base):
     """مدل برای ذخیره وضعیت سلامت سرویس‌ها"""
     __tablename__ = "service_health"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     service_name: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)  # up, down, degraded
     last_check: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
@@ -39,10 +41,11 @@ class ServiceHealth(BaseModel):
         return f"<ServiceHealth(service={self.service_name}, status={self.status})>"
 
 
-class ErrorLog(BaseModel):
+class ErrorLog(Base):
     """مدل برای ذخیره لاگ خطاها"""
     __tablename__ = "error_logs"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     error_type: Mapped[str] = mapped_column(String(100), nullable=False)
     error_message: Mapped[str] = mapped_column(String, nullable=False)
     stack_trace: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -55,10 +58,11 @@ class ErrorLog(BaseModel):
         return f"<ErrorLog(type={self.error_type}, service={self.service_name})>"
 
 
-class PerformanceMetrics(BaseModel):
+class PerformanceMetrics(Base):
     """مدل برای ذخیره متریک‌های عملکردی"""
     __tablename__ = "performance_metrics"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     endpoint: Mapped[str] = mapped_column(String(200), nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False)
     response_time_ms: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -72,10 +76,11 @@ class PerformanceMetrics(BaseModel):
         return f"<PerformanceMetrics(endpoint={self.endpoint}, response_time={self.response_time_ms}ms)>"
 
 
-class ResourceUsage(BaseModel):
+class ResourceUsage(Base):
     """مدل برای ذخیره اطلاعات مصرف منابع"""
     __tablename__ = "resource_usage"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)  # cpu, memory, disk, network
     usage_value: Mapped[float] = mapped_column(Float, nullable=False)
     usage_unit: Mapped[str] = mapped_column(String(20), nullable=False)  # %, MB, GB, etc.

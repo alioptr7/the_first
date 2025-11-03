@@ -12,7 +12,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.db.session import async_session
+from api.db.session import async_session_factory
 from api.models.request import Request
 from api.models.task_log import TaskLog
 

@@ -1,27 +1,39 @@
-from pydantic import BaseModel, ConfigDict
-from uuid import UUID
+"""User schemas"""
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, EmailStr, ConfigDict
+
 
 class UserBase(BaseModel):
+    """Base user schema"""
     username: str
-    email: str
-    full_name: Optional[str] = None
-
-
-class User(UserBase):
-    id: UUID
-    profile_type: str
-    rate_limit_per_minute: int
-    rate_limit_per_hour: int
-    rate_limit_per_day: int
-    priority: int
-    is_active: bool
-    allowed_indices: Optional[list[str]] = None
-    
-    model_config = ConfigDict(from_attributes=True)
+    email: EmailStr
+    is_active: bool = True
+    is_admin: bool = False
 
 
 class UserCreate(UserBase):
+    """User creation schema"""
     password: str
+
+
+class UserUpdate(BaseModel):
+    """User update schema"""
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserResponse(UserBase):
+    """User response schema"""
+    id: int
+    last_login: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

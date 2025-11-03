@@ -3,7 +3,7 @@ from typing import Optional
 
 import redis
 
-from core.config import settings
+from .config import settings
 
 redis_client = redis.Redis.from_url(settings.REDIS_URL)
 

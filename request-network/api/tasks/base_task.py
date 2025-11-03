@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.db.session import async_session
+from api.db.session import async_session_factory
 from api.models.task_logs import TaskLogs
 
 

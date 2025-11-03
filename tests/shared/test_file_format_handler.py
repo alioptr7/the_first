@@ -3,6 +3,7 @@ from pathlib import Path
 import uuid
 import re
 import json
+from datetime import datetime, timezone
 from shared.file_format_handler import (
     JSONLHandler,
     generate_filename,
@@ -87,6 +88,40 @@ def test_read_file_with_empty_lines(tmp_path: Path):
     assert read_data == expected_data
 
 
+def test_read_invalid_json(tmp_path: Path):
+    """
+    Tests handling of invalid JSON content.
+    """
+    file_path = tmp_path / "invalid.jsonl"
+    content = (
+        '{"id": 1, "name": "valid"}\n'
+        'invalid json\n'
+        '{"id": 2, "name": "also valid"}\n'
+    )
+    file_path.write_text(content, encoding='utf-8')
+
+    with pytest.raises(json.JSONDecodeError):
+        JSONLHandler.read_jsonl(file_path)
+
+
+def test_read_nonexistent_file():
+    """
+    Tests reading from a nonexistent file.
+    """
+    with pytest.raises(FileNotFoundError):
+        JSONLHandler.read_jsonl("nonexistent.jsonl")
+
+
+def test_write_to_nonexistent_directory(tmp_path: Path):
+    """
+    Tests writing to a nonexistent directory (should create it).
+    """
+    file_path = tmp_path / "subdir" / "test.jsonl"
+    JSONLHandler.write_jsonl(SAMPLE_DATA, file_path)
+    assert file_path.exists()
+    assert list(JSONLHandler.read_jsonl(file_path)) == SAMPLE_DATA
+
+
 def test_generate_and_parse_filename():
     """Tests the filename generation and parsing logic, including types with underscores."""
     batch_id = uuid.uuid4()
@@ -113,6 +148,31 @@ def test_parse_invalid_filename():
     assert parse_filename("no_extension") is None
 
 
+def test_parse_filename_with_multiple_underscores():
+    """Tests parsing filenames with multiple underscores in batch_type."""
+    filename = "20250115143000_request_export_batch_123.jsonl"
+    parsed = parse_filename(filename)
+    assert parsed is not None
+    assert parsed["timestamp"] == "20250115143000"
+    assert parsed["batch_type"] == "request_export_batch"
+    assert parsed["batch_id"] == "123"
+
+
+def test_parse_filename_with_invalid_timestamp():
+    """Tests parsing filenames with invalid timestamp format."""
+    filename = "2025011_request_export_123.jsonl"  # Invalid timestamp (too short)
+    assert parse_filename(filename) is None
+
+    filename = "abcd20250115_request_export_123.jsonl"  # Invalid timestamp (non-numeric)
+    assert parse_filename(filename) is None
+
+
+def test_parse_filename_with_invalid_batch_id():
+    """Tests parsing filenames with invalid batch_id format."""
+    filename = "20250115143000_request_export_.jsonl"  # Empty batch_id
+    assert parse_filename(filename) is None
+
+
 def test_calculate_checksum(tmp_path: Path):
     """Tests the SHA-256 checksum calculation."""
     file_path = tmp_path / "checksum_test.txt"
@@ -127,10 +187,18 @@ def test_calculate_checksum(tmp_path: Path):
     assert actual_checksum == expected_checksum
 
 
+def test_calculate_checksum_nonexistent_file():
+    """Tests checksum calculation for nonexistent file."""
+    with pytest.raises(FileNotFoundError):
+        calculate_checksum("nonexistent.txt")
+
+
 def test_batch_metadata_creation_and_write(tmp_path: Path):
     """Tests the creation of a BatchMetadata object and writing it to a file."""
+    # Create a data file with known content
     data_file = tmp_path / "data.jsonl"
-    data_file.write_text("some data")
+    test_content = "test data content"
+    data_file.write_text(test_content)
 
     batch_id = uuid.uuid4()
     batch_type = "test_batch"
@@ -148,6 +216,27 @@ def test_batch_metadata_creation_and_write(tmp_path: Path):
         meta_data = json.load(f)
 
     assert meta_data["batch_id"] == str(batch_id)
+    assert meta_data["batch_type"] == batch_type
     assert meta_data["record_count"] == record_count
     assert meta_data["checksum_sha256"] == checksum
-    assert "created_at_utc" in meta_data
+    assert meta_data["file_size_bytes"] == len(test_content)
+    
+    # Verify created_at_utc format and value
+    created_at = datetime.fromisoformat(meta_data["created_at_utc"].replace('Z', '+00:00'))
+    assert created_at.tzinfo == timezone.utc
+    time_diff = datetime.now(timezone.utc) - created_at
+    assert time_diff.total_seconds() < 5  # Created within last 5 seconds
+
+
+def test_batch_metadata_with_nonexistent_file():
+    """Tests BatchMetadata creation with nonexistent file."""
+    batch_id = uuid.uuid4()
+    with pytest.raises(FileNotFoundError):
+        BatchMetadata(batch_id, "test", 1, Path("nonexistent.jsonl"), "checksum")
+
+
+def test_batch_metadata_with_directory():
+    """Tests BatchMetadata creation with directory instead of file."""
+    batch_id = uuid.uuid4()
+    with pytest.raises(IsADirectoryError):
+        BatchMetadata(batch_id, "test", 1, Path("/"), "checksum")

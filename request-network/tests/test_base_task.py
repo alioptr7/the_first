@@ -20,7 +20,7 @@ class TestTask(BaseTask):
 
 
 @pytest.mark.asyncio
-async def test_successful_task(db_session):
+async def test_successful_task(db_session: AsyncSession):
     """تست اجرای موفق تسک"""
     request_id = uuid4()
     

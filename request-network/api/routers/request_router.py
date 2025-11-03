@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import List, Annotated
 
@@ -6,15 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from core.validation import validate_request_payload
-from db.session import get_db_session
-from db.models.user import User
-from models.request import Request
-from auth.dependencies import get_current_active_user
+from api.core.validation import validate_request_payload
+from api.db.session import get_db_session
+from api.models.user import User
+from api.models.request import Request
+from api.auth.dependencies import get_current_active_user
 # from rate_limiter import check_rate_limit  # TODO: Fix rate limiter
-from schemas.request import RequestCreate, RequestPublic, RequestStatus
-from schemas.response_detail import ResponseDetail
-from core.redis import get_cached_response, cache_response
+from api.schemas.request import RequestCreate, RequestPublic, RequestStatus
+from api.schemas.response_detail import ResponseDetail
+from api.core.redis import get_cached_response, cache_response
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 

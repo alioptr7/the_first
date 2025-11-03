@@ -33,7 +33,7 @@ def sample_request_data() -> Dict:
 async def test_submit_request_success(
     app: FastAPI,
     client: AsyncClient,
-    session: AsyncSession,
+    db_session: AsyncSession,
     test_user: User,
     sample_request_data: Dict
 ):

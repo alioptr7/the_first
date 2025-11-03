@@ -1,30 +1,35 @@
+"""Database session management"""
 from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from api.core.config import settings
 
-from core.config import settings
-
-# ایجاد یک موتور دیتابیس غیرهمزمان
-# pool_pre_ping=True: قبل از هر استفاده، اتصال را چک می‌کند تا از اتصالات مرده جلوگیری شود.
-async_engine = create_async_engine(
-    str(settings.DATABASE_URL),
-    echo=False,  # در محیط تست، لاگ‌های SQL را غیرفعال می‌کنیم
-    pool_pre_ping=True,
+# Create async engine
+engine = create_async_engine(
+    settings.SQLALCHEMY_DATABASE_URI,
+    echo=settings.DB_ECHO_LOG,
+    future=True,
 )
 
-# ایجاد یک کارخانه برای ساخت session های غیرهمزمان
-AsyncSessionFactory = async_sessionmaker(
-    async_engine, autoflush=False, expire_on_commit=False, class_=AsyncSession
+# Create async session factory
+async_session_factory = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
 )
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    FastAPI dependency to get a database session.
-    Ensures the session is always closed after the request.
-    """
-    async with AsyncSessionFactory() as session:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency function that yields db sessions"""
+    async with async_session_factory() as session:
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()

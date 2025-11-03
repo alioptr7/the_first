@@ -1,6 +1,15 @@
 """تست‌های مربوط به API‌های مدیریت کلیدهای API"""
+from datetime import datetime, timedelta, timezone
 import uuid
-from typing import Dict
+
+import pytest
+from fastapi import status
+from sqlalchemy import select
+
+from api.auth.security import create_access_token
+from api.core.config import settings
+from api.models.user import User
+from api.models.api_key import ApiKey
 
 import pytest
 from fastapi import FastAPI, status
@@ -25,7 +34,7 @@ def api_key_create_data() -> Dict:
 async def test_create_api_key(
     app: FastAPI,
     client: AsyncClient,
-    session: AsyncSession,
+    db_session: AsyncSession,
     test_user: User,
     api_key_create_data: Dict
 ):
@@ -49,7 +58,7 @@ async def test_create_api_key(
 async def test_get_user_api_keys(
     app: FastAPI,
     client: AsyncClient,
-    session: AsyncSession,
+    db_session: AsyncSession,
     test_user: User
 ):
     """تست دریافت لیست کلیدهای API کاربر"""
@@ -63,8 +72,8 @@ async def test_get_user_api_keys(
             scopes=["read:requests"],
             is_active=True
         )
-        session.add(api_key)
-    await session.commit()
+        db_session.add(api_key)
+    await db_session.commit()
 
     response = await client.get(
         f"{settings.API_V1_STR}/api-keys/",
@@ -100,7 +109,7 @@ async def test_get_user_api_keys_empty(
 async def test_revoke_api_key(
     app: FastAPI,
     client: AsyncClient,
-    session: AsyncSession,
+    db_session: AsyncSession,
     test_user: User
 ):
     """تست غیرفعال کردن کلید API"""
@@ -113,8 +122,8 @@ async def test_revoke_api_key(
         scopes=["read:requests"],
         is_active=True
     )
-    session.add(api_key)
-    await session.commit()
+    db_session.add(api_key)
+    await db_session.commit()
 
     response = await client.delete(
         f"{settings.API_V1_STR}/api-keys/{api_key.id}",
@@ -124,7 +133,7 @@ async def test_revoke_api_key(
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # بررسی غیرفعال شدن کلید
-    updated_key = await session.get(APIKey, api_key.id)
+    updated_key = await db_session.get(APIKey, api_key.id)
     assert not updated_key.is_active
 
 
@@ -147,7 +156,7 @@ async def test_revoke_api_key_not_found(
 async def test_revoke_api_key_unauthorized(
     app: FastAPI,
     client: AsyncClient,
-    session: AsyncSession,
+    db_session: AsyncSession,
     test_user: User,
     other_user: User
 ):
@@ -161,8 +170,8 @@ async def test_revoke_api_key_unauthorized(
         scopes=["read:requests"],
         is_active=True
     )
-    session.add(api_key)
-    await session.commit()
+    db_session.add(api_key)
+    await db_session.commit()
 
     # تلاش برای غیرفعال کردن با کاربر دوم
     response = await client.delete(

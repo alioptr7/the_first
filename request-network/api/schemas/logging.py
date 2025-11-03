@@ -1,140 +1,147 @@
-"""اسکیماهای مربوط به سیستم لاگینگ"""
+"""Schemas for logging functionality"""
 from datetime import datetime
-from typing import Dict, List, Optional
-from uuid import UUID
-
-from pydantic import BaseModel, Field
+from typing import Dict, Optional, List
+from pydantic import BaseModel, ConfigDict
 
 
 class LogEntryBase(BaseModel):
-    """مدل پایه برای لاگ‌ها"""
-    level: str = Field(..., description="سطح لاگ")
-    message: str = Field(..., description="پیام لاگ")
-    source: str = Field(..., description="منبع لاگ")
-    trace_id: Optional[str] = Field(None, description="شناسه پیگیری")
-    request_id: Optional[UUID] = Field(None, description="شناسه درخواست")
-    user_id: Optional[UUID] = Field(None, description="شناسه کاربر")
-    metadata: Optional[Dict] = Field(None, description="اطلاعات اضافی")
+    """Base schema for all log entries"""
+    service_name: str
+    extra_data: Optional[Dict] = None
 
 
 class LogEntryCreate(LogEntryBase):
-    """مدل ایجاد لاگ"""
+    """Schema for creating a log entry"""
     pass
 
 
-class LogEntryRead(LogEntryBase):
-    """مدل خواندن لاگ"""
-    id: UUID
+class LogEntry(LogEntryBase):
+    """Schema for a log entry"""
+    id: int
     timestamp: datetime
+    log_type: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class ErrorLogBase(BaseModel):
-    """مدل پایه برای لاگ خطاها"""
-    error_type: str = Field(..., description="نوع خطا")
-    error_message: str = Field(..., description="پیام خطا")
-    stack_trace: Optional[str] = Field(None, description="جزئیات خطا")
-    source: str = Field(..., description="منبع خطا")
-    severity: str = Field(..., description="شدت خطا")
-    status: str = Field(..., description="وضعیت خطا")
-    resolution: Optional[str] = Field(None, description="راه‌حل خطا")
-    request_id: Optional[UUID] = Field(None, description="شناسه درخواست")
-    user_id: Optional[UUID] = Field(None, description="شناسه کاربر")
-    metadata: Optional[Dict] = Field(None, description="اطلاعات اضافی")
+class ErrorLogBase(LogEntryBase):
+    """Base schema for error logs"""
+    error_type: str
+    error_message: str
+    stack_trace: Optional[str] = None
+    severity: str
+    status: str
+    resolution: Optional[str] = None
 
 
 class ErrorLogCreate(ErrorLogBase):
-    """مدل ایجاد لاگ خطا"""
+    """Schema for creating an error log"""
     pass
 
 
 class ErrorLogUpdate(BaseModel):
-    """مدل به‌روزرسانی لاگ خطا"""
-    status: Optional[str] = Field(None, description="وضعیت جدید خطا")
-    resolution: Optional[str] = Field(None, description="راه‌حل خطا")
-    resolved_by: Optional[UUID] = Field(None, description="شناسه کاربر حل‌کننده")
+    """Schema for updating an error log"""
+    status: Optional[str] = None
+    resolution: Optional[str] = None
+    resolved_by: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class ErrorLogRead(ErrorLogBase):
-    """مدل خواندن لاگ خطا"""
-    id: UUID
+class ErrorLog(ErrorLogBase):
+    """Schema for an error log"""
+    id: int
     timestamp: datetime
-    resolved_at: Optional[datetime]
-    resolved_by: Optional[UUID]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class AuditLogBase(BaseModel):
-    """مدل پایه برای لاگ تغییرات"""
-    action: str = Field(..., description="نوع عملیات")
-    entity_type: str = Field(..., description="نوع موجودیت")
-    entity_id: str = Field(..., description="شناسه موجودیت")
-    user_id: Optional[UUID] = Field(None, description="شناسه کاربر")
-    changes: Optional[Dict] = Field(None, description="تغییرات")
-    metadata: Optional[Dict] = Field(None, description="اطلاعات اضافی")
+class AuditLogBase(LogEntryBase):
+    """Base schema for audit logs"""
+    user_id: int
+    action: str
+    resource_type: str
+    resource_id: str
+    status: str
+    details: Optional[Dict] = None
 
 
 class AuditLogCreate(AuditLogBase):
-    """مدل ایجاد لاگ تغییرات"""
+    """Schema for creating an audit log"""
     pass
 
 
-class AuditLogRead(AuditLogBase):
-    """مدل خواندن لاگ تغییرات"""
-    id: UUID
+class AuditLog(AuditLogBase):
+    """Schema for an audit log"""
+    id: int
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PerformanceLogBase(BaseModel):
-    """مدل پایه برای لاگ عملکرد"""
-    operation: str = Field(..., description="نوع عملیات")
-    duration_ms: int = Field(..., description="مدت زمان اجرا")
-    success: bool = Field(..., description="موفقیت عملیات")
-    error_message: Optional[str] = Field(None, description="پیام خطا")
-    request_id: Optional[UUID] = Field(None, description="شناسه درخواست")
-    user_id: Optional[UUID] = Field(None, description="شناسه کاربر")
-    metadata: Optional[Dict] = Field(None, description="اطلاعات اضافی")
+class PerformanceLogBase(LogEntryBase):
+    """Base schema for performance logs"""
+    endpoint: str
+    method: str
+    response_time_ms: int
+    status_code: int
+    request_size_bytes: Optional[int] = None
+    response_size_bytes: Optional[int] = None
 
 
 class PerformanceLogCreate(PerformanceLogBase):
-    """مدل ایجاد لاگ عملکرد"""
+    """Schema for creating a performance log"""
     pass
 
 
-class PerformanceLogRead(PerformanceLogBase):
-    """مدل خواندن لاگ عملکرد"""
-    id: UUID
+class PerformanceLog(PerformanceLogBase):
+    """Schema for a performance log"""
+    id: int
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+"""Logging schemas"""
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
 class LogFilter(BaseModel):
-    """مدل فیلتر لاگ‌ها"""
-    start_time: Optional[datetime] = Field(None, description="زمان شروع")
-    end_time: Optional[datetime] = Field(None, description="زمان پایان")
-    level: Optional[str] = Field(None, description="سطح لاگ")
-    source: Optional[str] = Field(None, description="منبع لاگ")
-    user_id: Optional[UUID] = Field(None, description="شناسه کاربر")
-    request_id: Optional[UUID] = Field(None, description="شناسه درخواست")
+    """Log filter schema"""
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    service_name: Optional[str] = None
+    log_type: Optional[str] = None
+    user_id: Optional[int] = None
+    severity: Optional[str] = None
+    status: Optional[str] = None
+
+
+class LogResponse(BaseModel):
+    """Log response schema"""
+    id: int
+    task_id: str
+    status: str
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LogSummary(BaseModel):
-    """مدل خلاصه لاگ‌ها"""
-    total_logs: int = Field(..., description="تعداد کل لاگ‌ها")
-    error_count: int = Field(..., description="تعداد خطاها")
-    warning_count: int = Field(..., description="تعداد هشدارها")
-    info_count: int = Field(..., description="تعداد اطلاعات")
-    debug_count: int = Field(..., description="تعداد لاگ‌های دیباگ")
-    average_response_time: float = Field(..., description="میانگین زمان پاسخ")
-    error_rate: float = Field(..., description="نرخ خطا")
-    start_time: datetime = Field(..., description="زمان شروع")
-    end_time: datetime = Field(..., description="زمان پایان")
+    """Schema for log summary"""
+    total_logs: int
+    error_count: int
+    warning_count: int
+    average_response_time: float
+    success_rate: float
+    recent_errors: List[ErrorLog]
+
+    model_config = ConfigDict(from_attributes=True)
