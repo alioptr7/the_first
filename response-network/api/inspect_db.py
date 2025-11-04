@@ -10,7 +10,8 @@ async def main():
         print(f"Table: {table}")
         columns = inspector.get_columns(table)
         for column in columns:
-            print(f"  - {column['name']}")
+            print(f"  - {column['name']} : {str(column['type'])}")
 
 if __name__ == "__main__":
     asyncio.run(main())
+
