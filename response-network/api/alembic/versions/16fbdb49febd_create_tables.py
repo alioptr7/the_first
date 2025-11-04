@@ -1,8 +1,8 @@
-"""Fix request type relationships
+"""create tables
 
-Revision ID: dbaa19410094
-Revises: 2c5c3ff1cc4e
-Create Date: 2025-11-02 00:29:08.546312
+Revision ID: 16fbdb49febd
+Revises: 437e5a6d2fbf
+Create Date: 2025-11-03 04:19:47.084979
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'dbaa19410094'
-down_revision: Union[str, None] = '2c5c3ff1cc4e'
+revision: str = '16fbdb49febd'
+down_revision: Union[str, None] = '437e5a6d2fbf'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

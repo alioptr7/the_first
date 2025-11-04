@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "your-secret-key-change-this-in-production-min-32-chars"
     LOG_LEVEL: str = "INFO"
+    DEV_MODE: bool = True
     MONITORING_API_KEY: str = "admin-secret-key-change-this"
     ALGORITHM: str = "HS256"  # الگوریتم رمزنگاری برای JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # مدت زمان اعتبار توکن دسترسی به دقیقه

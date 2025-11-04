@@ -6,10 +6,20 @@ from datetime import datetime
 from core.dependencies import get_db
 from models.schemas import UserCreate, UserUpdate, User, UserWithStats
 from models.user import User as UserModel
-from auth.dependencies import get_current_admin_user
+from auth.dependencies import get_current_admin_user, get_current_active_user
 from crud import users as user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+@router.get("/me", response_model=User)
+async def get_current_user(
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """
+    Get current user information.
+    Any authenticated user can access their own information.
+    """
+    return current_user
 
 @router.get("", response_model=List[UserWithStats])
 async def list_users(

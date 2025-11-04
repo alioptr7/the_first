@@ -1,22 +1,21 @@
-from sqlalchemy import (
-    Boolean,
-    Column,
-    String,
-    UUID,
-)
-from sqlalchemy.orm import relationship
+"""User model"""
+import uuid
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import Base
+from shared.database.base import BaseModel
 from core.hashing import verify_password
 
-class User(Base):
+
+class User(BaseModel):
+    """User model"""
     __tablename__ = "users"
 
-    id = Column(UUID, primary_key=True)
-    username = Column(String(100), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True, index=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    profile_type: Mapped[str] = mapped_column(String(50), nullable=False, default="basic")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     
     # Relationships
     requests = relationship("Request", back_populates="user", cascade="all, delete-orphan")
