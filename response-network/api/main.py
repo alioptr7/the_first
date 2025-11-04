@@ -83,8 +83,7 @@ app.include_router(
 )
 app.include_router(
     system_router, 
-    prefix=settings.API_V1_STR,
-    dependencies=[Depends(oauth2_scheme)]
+    prefix=settings.API_V1_STR
 )
 app.include_router(
     user_router, 

@@ -1,6 +1,6 @@
 import psutil
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from typing import List, Optional
 from datetime import datetime, timedelta
 import logging
@@ -60,13 +60,13 @@ async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemH
         await db.execute(select(1))
         
         # Get PostgreSQL version and some basic stats
-        result = await db.execute("""
+        result = await db.execute(text("""
             SELECT version(),
                    pg_database_size(current_database()) as db_size,
                    (SELECT count(*) FROM pg_stat_activity) as connections,
                    pg_is_in_recovery() as is_replica
-        """)
-        pg_stats = await result.fetchone()
+        """))
+        pg_stats = result.fetchone()
         
         db_status = {
             "version": pg_stats[0].split()[0],
@@ -76,12 +76,12 @@ async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemH
         }
         
         # Check if we're approaching connection limit
-        result = await db.execute("""
+        result = await db.execute(text("""
             SELECT setting::int as max_connections
             FROM pg_settings
             WHERE name = 'max_connections'
-        """)
-        max_connections = (await result.fetchone())[0]
+        """))
+        max_connections = (result.fetchone())[0]
         connection_ratio = pg_stats[2] / max_connections
         
         if connection_ratio > 0.8:  # More than 80% connections used

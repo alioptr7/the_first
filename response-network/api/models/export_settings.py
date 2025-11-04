@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from api.db.base_class import Base
+from shared.database.base import Base
 
 
 class ExportableSettings(Base):

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.database.base import BaseModel
@@ -31,6 +31,7 @@ class RequestType(BaseModel):
     """مدل برای ذخیره‌سازی انواع درخواست‌ها و الگوهای جستجوی آنها"""
     __tablename__ = "request_types"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     query_type: Mapped[str] = mapped_column(String(50), nullable=False, comment="نوع جستجوی الستیک‌سرچ (match, term, etc.)")

@@ -12,7 +12,7 @@ from models.user import User
 from auth.dependencies import get_current_user
 from crud import requests as request_service
 
-router = APIRouter(prefix="/api", tags=["requests"])
+router = APIRouter(tags=["requests"])
 
 @router.get("/requests", response_model=PaginatedResponse)
 async def list_requests(

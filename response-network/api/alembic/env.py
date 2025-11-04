@@ -12,9 +12,8 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 # این بخش بعد از اضافه کردن مسیر پروژه به PYTHONPATH باید باشد
-from shared.models import Base
-from models.incoming_request import IncomingRequest
-from models.request_type import RequestType
+from shared.database.base import Base
+from models import * # وارد کردن تمام مدل‌ها
 
 # این بخش برای تنظیمات Alembic است
 config = context.config
@@ -33,7 +32,7 @@ def get_url():
     host = os.getenv("RESPONSE_DB_HOST", "localhost")
     port = os.getenv("RESPONSE_DB_PORT", "5433")
     db = os.getenv("RESPONSE_DB_NAME", "response_db")
-    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
 
 def run_migrations_offline() -> None:
     """اجرای مهاجرت‌ها در حالت آفلاین"""

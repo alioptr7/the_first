@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timezone
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, select
 
 from models.request import Request
 from models.query_result import QueryResult
@@ -19,23 +19,29 @@ async def get_request_stats(
     end_date: Optional[str] = None
 ) -> RequestStats:
     """Get statistics about requests processed by the response network."""
-    query = db.query(Request)
+    request_query = select(Request)
     
     if start_date:
         start = datetime.fromisoformat(start_date)
-        query = query.filter(Request.created_at >= start)
+        request_query = request_query.where(Request.created_at >= start)
     if end_date:
         end = datetime.fromisoformat(end_date)
-        query = query.filter(Request.created_at <= end)
+        request_query = request_query.where(Request.created_at <= end)
 
-    total_count = query.count()
-    successful = query.filter(Request.status == "completed").count()
-    failed = query.filter(Request.status == "failed").count()
-    avg_response_time = db.query(
-        func.avg(QueryResult.response_time)
-    ).filter(
-        QueryResult.request_id.in_(query.with_entities(Request.id))
-    ).scalar() or 0.0
+    # To get counts, we create subqueries
+    total_count_query = select(func.count()).select_from(request_query.with_only_columns(Request.id).subquery())
+    successful_query = select(func.count()).select_from(request_query.where(Request.status == "completed").with_only_columns(Request.id).subquery())
+    failed_query = select(func.count()).select_from(request_query.where(Request.status == "failed").with_only_columns(Request.id).subquery())
+
+    total_count = (await db.execute(total_count_query)).scalar_one()
+    successful = (await db.execute(successful_query)).scalar_one()
+    failed = (await db.execute(failed_query)).scalar_one()
+    
+    avg_response_time_query = select(func.avg(QueryResult.execution_time_ms)).where(
+        QueryResult.request_id.in_(request_query.with_only_columns(Request.id))
+    )
+    
+    avg_response_time = (await db.execute(avg_response_time_query)).scalar() or 0.0
 
     return RequestStats(
         total_count=total_count,
