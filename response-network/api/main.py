@@ -1,7 +1,11 @@
 import logging
 import sys
-import os
 from pathlib import Path
+
+# Add project root to sys.path to allow importing 'shared'
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 import redis
 from fastapi import Depends, FastAPI, HTTPException
@@ -10,30 +14,18 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
-# --- Start of Path Fix ---
-# Add project root, response-network, and api to the Python path
-project_root = Path(__file__).resolve().parents[2]  # the_first/
-response_network_root = Path(__file__).resolve().parents[1]  # response-network/
-api_root = Path(__file__).resolve().parent  # api/
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
-if str(response_network_root) not in sys.path:
-    sys.path.append(str(response_network_root))
-if str(api_root) not in sys.path:
-    sys.path.append(str(api_root))
-# --- End of Path Fix ---
-
-from core.config import settings
-from db.session import get_db_session as get_db
-from router.request_router import router as request_router
-from router.system_router import router as system_router
-from router.user_router import router as user_router
-from router.monitoring_router import router as monitoring_router
-from router.stats_router import router as stats_router
-from router.search_router import router as search_router
-from router.settings_router import router as settings_router
-from auth.security import get_current_user
-from router import auth_router
+from .core.config import settings
+from .db.session import get_db_session as get_db
+from .router.request_router import router as request_router
+from .router.system_router import router as system_router
+from .router.user_router import router as user_router
+from .router.monitoring_router import router as monitoring_router
+from .router.stats_router import router as stats_router
+from .router.search_router import router as search_router
+from .router.settings_router import router as settings_router
+from .router.request_type_router import router as request_type_router
+from .auth.security import get_current_user
+from .router import auth_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -106,6 +98,11 @@ app.include_router(
 )
 app.include_router(
     settings_router,
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(oauth2_scheme)]
+)
+app.include_router(
+    request_type_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(oauth2_scheme)]
 )
@@ -238,3 +235,4 @@ async def cache_stats():
     except redis.exceptions.ConnectionError as e:
         logger.error(f"Could not connect to Redis for cache stats: {e}")
         raise HTTPException(status_code=503, detail="Could not connect to Redis.")
+

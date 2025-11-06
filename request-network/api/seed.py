@@ -8,14 +8,13 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
-from core.hashing import get_password_hash
+from shared.auth.security import get_password_hash
 
 # --- Path Setup ---
 # This allows the script to find modules in the 'api' and 'shared' directories.
-api_dir = os.path.realpath(os.path.dirname(__file__))
-sys.path.insert(0, api_dir)
-project_root = os.path.realpath(os.path.join(api_dir, "..", ".."))
-sys.path.insert(0, project_root)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 
 def get_database_url():

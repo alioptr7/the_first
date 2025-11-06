@@ -2,17 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from core.dependencies import get_db
-from models.schemas import (
+from ..core.dependencies import get_db
+from ..models.model_schemas import (
     RequestStats,
     QueryStats,
     SystemHealth,
     SystemStats,
     LogEntry
 )
-from auth.dependencies import get_current_user
-from models.user import User
-from crud import stats as stats_service
+from ..auth.dependencies import get_current_user
+from ..models.user import User
+from ..crud import stats as stats_service
 
 router = APIRouter(
     prefix="/monitoring", 

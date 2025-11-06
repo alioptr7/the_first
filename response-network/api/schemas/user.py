@@ -7,7 +7,6 @@ import uuid
 class UserBase(BaseModel):
     """Shared properties for a user."""
     email: EmailStr
-    full_name: str | None = None
     username: str
     daily_request_limit: int = 100
     monthly_request_limit: int = 2000
@@ -32,12 +31,13 @@ class UserRead(UserBase):
 class UserCreate(UserBase):
     """Properties to receive via API on creation."""
     password: str
+    profile_type: str = 'user'
+    is_active: bool = True
 
 
 class UserUpdate(BaseModel):
     """Properties that can be updated."""
     email: EmailStr | None = None
-    full_name: str | None = None
     username: str | None = None
     password: str | None = None
 

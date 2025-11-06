@@ -10,12 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import TokenData
-from core.hashing import get_password_hash, verify_password # Import from the new module
-from db.session import get_db_session
-from models.user import User
+from ..core.hashing import get_password_hash, verify_password # Import from the new module
+from ..db.session import get_db_session
+from ..models.user import User
 
 
-from core.config import settings
+from ..core.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM

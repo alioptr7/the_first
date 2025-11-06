@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from core.dependencies import get_db
-from models.schemas import (
+from ..core.dependencies import get_db
+from ..models.model_schemas import (
     Request, RequestCreate, RequestUpdate, RequestStats,
     PaginatedResponse
 )
-from models.user import User
-from auth.dependencies import get_current_user
-from crud import requests as request_service
+from ..models.user import User
+from ..auth.dependencies import get_current_user
+from ..crud import requests as request_service
 
 router = APIRouter(tags=["requests"])
 
@@ -60,20 +60,6 @@ async def list_requests(
         size=size
     )
 
-@router.get("/requests/{request_id}", response_model=Request)
-async def get_request(
-    request_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get detailed information about a specific request.
-    """
-    request = await request_service.get_request(db, request_id)
-    if not request:
-        raise HTTPException(status_code=404, detail="Request not found")
-    return request
-
 @router.get("/requests/stats", response_model=RequestStats)
 async def get_request_stats(
     start_date: Optional[datetime] = Query(None),
@@ -90,3 +76,17 @@ async def get_request_stats(
         end_date = datetime.utcnow()
 
     return await request_service.get_request_stats(db, start_date, end_date)
+
+@router.get("/requests/{request_id}", response_model=Request)
+async def get_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed information about a specific request.
+    """
+    request = await request_service.get_request(db, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return request

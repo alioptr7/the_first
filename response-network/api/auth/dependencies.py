@@ -8,10 +8,10 @@ from datetime import datetime
 import json
 
 from core.config import settings
-from core.dependencies import get_db
-from models.user import User
-from models.user_request_access import UserRequestAccess
-from models.request_type import RequestType
+from ..core.dependencies import get_db
+from ..models.user import User
+from ..models.user_request_access import UserRequestAccess
+from ..models.request_type import RequestType
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 

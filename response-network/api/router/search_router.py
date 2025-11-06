@@ -4,11 +4,11 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.dependencies import get_current_active_user, check_user_limits, check_index_access
-from core.dependencies import get_db
-from models.user import User
-from models.request import Request
-from schemas.search import QueryRequest, QueryResponse
+from ..auth.dependencies import get_current_active_user, check_user_limits, check_index_access
+from ..core.dependencies import get_db
+from ..models.user import User
+from ..models.request import Request
+from ..schemas.search import QueryRequest, QueryResponse
 
 router = APIRouter(
     prefix="/search",

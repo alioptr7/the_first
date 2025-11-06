@@ -10,9 +10,12 @@ from sqlalchemy.future import select
 
 # --- Path Setup ---
 # This allows the script to find modules in the 'api' and 'shared' directories.
-api_dir = os.path.realpath(os.path.dirname(__file__))
-project_root = os.path.realpath(os.path.join(api_dir, "..", ".."))
+api_dir = os.path.dirname(os.path.abspath(__file__))
+response_network_dir = os.path.dirname(api_dir)
+project_root = os.path.dirname(response_network_dir)
+
 sys.path.insert(0, project_root)
+sys.path.insert(0, api_dir)
 
 from core.hashing import get_password_hash
 from db.session import async_session
@@ -27,6 +30,14 @@ async def seed_data():
     """
     async with async_session() as session:
         print("--- Starting to seed data for response-network ---")
+
+        # --- 0. Clear Existing Data ---
+        print("Clearing existing data...")
+        await session.execute(UserRequestAccess.__table__.delete())
+        await session.execute(RequestType.__table__.delete())
+        await session.execute(User.__table__.delete())
+        await session.commit()
+        print("-> Existing data cleared.")
 
         # --- 1. Create Users ---
         print("Creating users...")

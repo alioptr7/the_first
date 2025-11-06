@@ -1,15 +1,18 @@
 """تنظیمات API"""
 from typing import List
 
+from dotenv import load_dotenv
 from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv("api/.env")
 
 class Settings(BaseSettings):
     """تنظیمات برنامه"""
     PROJECT_NAME: str = "Response Network Monitoring API"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "your-secret-key-change-this-in-production-min-32-chars"
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
     DEV_MODE: bool = True
     MONITORING_API_KEY: str = "admin-secret-key-change-this"
     ALGORITHM: str = "HS256"  # الگوریتم رمزنگاری برای JWT
@@ -57,11 +60,13 @@ class Settings(BaseSettings):
         self.ELASTICSEARCH_URL = f"http://{self.ELASTICSEARCH_HOST}:{self.ELASTICSEARCH_PORT}"
         return self.ELASTICSEARCH_URL
 
+
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file="api/.env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="allow"  # اجازه فیلدهای اضافی
+        extra="ignore"
     )
 
 settings = Settings()

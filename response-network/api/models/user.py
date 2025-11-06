@@ -4,7 +4,6 @@ from sqlalchemy import Boolean, String, Integer, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from shared.database.base import BaseModel
-from core.hashing import verify_password
 
 
 class User(BaseModel):
@@ -26,7 +25,3 @@ class User(BaseModel):
     created_request_types = relationship("RequestType", back_populates="created_by")
     request_access = relationship("UserRequestAccess", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("UserSettings", back_populates="user", cascade="all, delete-orphan")
-
-    def verify_password(self, password: str) -> bool:
-        """Verifies the provided password against the stored hash."""
-        return verify_password(password, self.hashed_password)
