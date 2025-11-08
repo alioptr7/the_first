@@ -7,12 +7,18 @@ from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from shared.database.base import BaseModel
+from api.db.base_class import Base
 
 
-class RequestTypeParameter(BaseModel):
+class RequestTypeParameter(Base):
     """مدل برای ذخیره‌سازی پارامترهای مورد نیاز هر نوع درخواست"""
     __tablename__ = "request_type_parameters"
+    id: Mapped[uuid.UUID] = mapped_column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
 
     request_type_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("request_types.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -27,7 +33,7 @@ class RequestTypeParameter(BaseModel):
     request_type = relationship("RequestType", back_populates="parameters")
 
 
-class RequestType(BaseModel):
+class RequestType(Base):
     """مدل برای ذخیره‌سازی انواع درخواست‌ها و الگوهای جستجوی آنها"""
     __tablename__ = "request_types"
 

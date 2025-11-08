@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from ..core.dependencies import get_db
-from ..models.model_schemas import (
+from api.core.dependencies import get_db
+from api.models.model_schemas import (
     Request, RequestCreate, RequestUpdate, RequestStats,
     PaginatedResponse
 )
-from ..models.user import User
-from ..auth.dependencies import get_current_user
-from ..crud import requests as request_service
+from api.models.user import User
+from api.auth.dependencies import get_current_user
+from api.crud import requests as request_service
 
 router = APIRouter(tags=["requests"])
 

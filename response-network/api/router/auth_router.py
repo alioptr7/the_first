@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from pydantic import BaseModel
 
-from ..auth import security
-from ..core.config import settings
-from ..db.session import get_db_session
-from ..models.user import User
-from ..schemas.user import UserRead
-from ..models.model_schemas import Token
+from api.auth import security
+from api.core.config import settings
+from api.db.session import get_db_session
+from api.models.user import User
+from api.schemas.user import UserRead
+from api.models.model_schemas import Token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

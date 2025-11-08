@@ -6,14 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ..auth.dependencies import get_current_active_user, get_current_admin_user
-from ..db.session import get_db_session
-from ..models.settings import Settings, UserSettings
-from ..models.user import User
-from ..schemas.settings import (
+from api.auth.dependencies import get_current_active_user, get_current_admin_user
+from api.db.session import get_db_session
+from api.models.settings import Settings, UserSettings
+from api.models.user import User
+from api.schemas.settings import (
     SettingCreate,
     SettingUpdate,
-    SettingRead,
     UserSettingCreate,
     UserSettingUpdate,
     UserSettingRead

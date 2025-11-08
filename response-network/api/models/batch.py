@@ -5,10 +5,10 @@ from sqlalchemy import String, Integer, DateTime, BigInteger, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from api.db.base_class import Base
 
 
-class BaseBatch(BaseModel):
+class BaseBatch(Base):
     __abstract__ = True
     
     batch_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -22,11 +22,23 @@ class BaseBatch(BaseModel):
 
 class ExportBatch(BaseBatch):
     __tablename__ = "export_batches"
+    id: Mapped[uuid.UUID] = mapped_column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ImportBatch(BaseBatch):
     __tablename__ = "import_batches"
+    id: Mapped[uuid.UUID] = mapped_column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -4,15 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from auth.dependencies import get_current_user, get_current_admin_user
-from api.db.session import get_db
+from ..auth.dependencies import get_current_user, get_current_admin_user
+from api.db.session import get_db_session
 from api.models.user import User
 from api.models.user_request_access import UserRequestAccess
 from api.models.request_type import RequestType
 from api.schemas.user_request_access import (
     UserRequestAccessCreate,
+    UserRequestAccessRead,
     UserRequestAccessUpdate,
-    UserRequestAccessRead
 )
 
 router = APIRouter(prefix="/user-request-access", tags=["user-request-access"])

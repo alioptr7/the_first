@@ -3,6 +3,16 @@ import os
 import sys
 from logging.config import fileConfig
 
+# اضافه کردن پوشه ریشه پروژه به sys.path
+from os.path import abspath, dirname
+project_root = abspath(dirname(dirname(dirname(__file__))))
+sys.path.insert(0, project_root)
+
+# اضافه کردن مسیر request-network به sys.path
+request_network_api_path = os.path.join(os.path.dirname(project_root), "request-network", "api")
+sys.path.insert(0, request_network_api_path)
+
+
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -13,7 +23,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirna
 
 # این بخش بعد از اضافه کردن مسیر پروژه به PYTHONPATH باید باشد
 from shared.database.base import Base
-from models import * # وارد کردن تمام مدل‌ها
+# وارد کردن مدل‌های هر دو بخش
+from models import *
+import models as request_network_models
+
 
 # این بخش برای تنظیمات Alembic است
 config = context.config
@@ -25,14 +38,18 @@ if config.config_file_name is not None:
 # اضافه کردن MetaData برای مدل‌ها
 target_metadata = Base.metadata
 
+from sqlalchemy.engine import URL
+
 def get_url():
     """ساخت URL دیتابیس از متغیرهای محیطی"""
-    user = os.getenv("RESPONSE_DB_USER", "user")
-    password = os.getenv("RESPONSE_DB_PASSWORD", "password")
-    host = os.getenv("RESPONSE_DB_HOST", "localhost")
-    port = os.getenv("RESPONSE_DB_PORT", "5433")
-    db = os.getenv("RESPONSE_DB_NAME", "response_db")
-    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
+    return URL.create(
+        drivername="postgresql+psycopg2",
+        username=os.getenv("RESPONSE_DB_USER", "user"),
+        password=os.getenv("RESPONSE_DB_PASSWORD", "password"),
+        host=os.getenv("RESPONSE_DB_HOST", "localhost"),
+        port=int(os.getenv("RESPONSE_DB_PORT", 5433)),
+        database=os.getenv("RESPONSE_DB_NAME", "response_db"),
+    )
 
 def run_migrations_offline() -> None:
     """اجرای مهاجرت‌ها در حالت آفلاین"""

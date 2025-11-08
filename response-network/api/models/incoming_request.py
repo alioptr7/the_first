@@ -4,12 +4,18 @@ from sqlalchemy import String, Integer, DateTime, Column, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from api.db.base_class import Base
 from .request_type import RequestType
 
 
-class IncomingRequest(BaseModel):
+class IncomingRequest(Base):
     __tablename__ = "incoming_requests"
+    id: Mapped[uuid.UUID] = mapped_column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
 
     # The ID from the Request Network
     original_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True, unique=True)

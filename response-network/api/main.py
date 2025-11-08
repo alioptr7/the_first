@@ -2,11 +2,6 @@ import logging
 import sys
 from pathlib import Path
 
-# Add project root to sys.path to allow importing 'shared'
-project_root = Path(__file__).resolve().parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
 import redis
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
@@ -47,7 +42,7 @@ app = FastAPI(
 )
 
 # Configure Security
-from auth.dependencies import oauth2_scheme
+from .auth.dependencies import oauth2_scheme
 
 # Set all CORS enabled origins
 app.add_middleware(

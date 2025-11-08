@@ -3,13 +3,14 @@ import uuid
 from sqlalchemy import Boolean, String, Integer, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from api.db.base_class import Base
 
 
-class User(BaseModel):
+class User(Base):
     """User model"""
     __tablename__ = "users"
 
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
