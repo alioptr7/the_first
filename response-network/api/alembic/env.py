@@ -3,29 +3,42 @@ import os
 import sys
 from logging.config import fileConfig
 
-# اضافه کردن پوشه ریشه پروژه به sys.path
+# اضافه کردن پوشه api به sys.path
 from os.path import abspath, dirname
-project_root = abspath(dirname(dirname(dirname(__file__))))
+api_dir = abspath(dirname(dirname(__file__)))
+sys.path.insert(0, api_dir)
+
+# اضافه کردن پوشه response-network به sys.path برای دسترسی به api module
+response_network_dir = dirname(api_dir)
+sys.path.insert(0, response_network_dir)
+
+# اضافه کردن پوشه shared به sys.path
+project_root = dirname(response_network_dir)
 sys.path.insert(0, project_root)
-
-# اضافه کردن مسیر request-network به sys.path
-request_network_api_path = os.path.join(os.path.dirname(project_root), "request-network", "api")
-sys.path.insert(0, request_network_api_path)
-
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
 
-# اضافه کردن مسیر پروژه به PYTHONPATH
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+# Import Base از همان جایی که مدل‌ها import می‌شوند
+# ابتدا باید api را به عنوان یک ماژول قابل import کنیم
+import importlib.util
+spec = importlib.util.spec_from_file_location("api", os.path.join(api_dir, "__init__.py"))
+if spec and spec.loader:
+    api_module = importlib.util.module_from_spec(spec)
+    sys.modules["api"] = api_module
 
-# این بخش بعد از اضافه کردن مسیر پروژه به PYTHONPATH باید باشد
-from shared.database.base import Base
-# وارد کردن مدل‌های هر دو بخش
-from models import *
-import models as request_network_models
+# حالا می‌توانیم modules را با prefix api import کنیم
+from api.db.base_class import Base
+from api import models
+
+# Import کردن همه مدل‌ها برای ثبت در metadata
+from api.models import (
+    User, Request, IncomingRequest, QueryResult,
+    ExportBatch, ImportBatch, ExportableSettings,
+    RequestType, Settings, SystemHealth, SystemLog,
+    UserRequestAccess
+)
 
 
 # این بخش برای تنظیمات Alembic است

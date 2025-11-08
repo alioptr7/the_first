@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, and_
 
-from ..auth.dependencies import get_current_active_user
-from ..db.session import get_db_session
-from ..models.request_type import RequestType
+from ..auth.dependencies import get_current_active_user, get_current_admin_user
+from ..core.dependencies import get_db as get_db_session
+from ..models.request_type import RequestType, RequestTypeParameter
 from ..models.user import User
 from ..schemas.request_type import RequestTypeCreate, RequestTypeRead, RequestTypeUpdate
 
@@ -47,7 +47,7 @@ async def list_request_types(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     include_inactive: bool = False,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db_session)
 ):
     """List request types available to the current user."""
@@ -78,7 +78,7 @@ async def list_request_types(
 @router.get("/{request_type_id}", response_model=RequestTypeRead)
 async def get_request_type(
     request_type_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db_session)
 ):
     """Get a specific request type by ID."""

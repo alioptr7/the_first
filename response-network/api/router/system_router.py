@@ -7,10 +7,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.dependencies import get_current_admin_user
+from ..auth.security import get_current_user
 from ..core.elasticsearch_client import ElasticsearchClient
 from ..crud import system as system_service
 from ..db.session import get_db_session as get_db
-from ..models.model_schemas import HealthCheck
+from ..models.model_schemas import SystemHealth, SystemStats, LogEntry
 from ..models.user import User
 
 logger = logging.getLogger(__name__)

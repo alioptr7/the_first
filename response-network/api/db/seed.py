@@ -59,94 +59,54 @@ async def seed_data():
                 "username": "admin",
                 "email": "admin@example.com",
                 "hashed_password": hash_password("SuperSecureAdminP@ss!"),
-                "full_name": "Admin User",
                 "profile_type": "admin",
-                "priority": 10,
-                "allowed_indices": '["*"]',  # Admin can access all indices
+                "allowed_indices": '["*"]',
                 "is_active": True,
+                "daily_request_limit": 1000,
+                "monthly_request_limit": 20000,
+                "max_results_per_request": 10000,
             },
             {
                 "id": str(uuid.uuid4()),
                 "username": "basic_user",
                 "email": "basic@example.com",
                 "hashed_password": hash_password("basic_password123"),
-                "full_name": "Basic Test User",
                 "profile_type": "basic",
-                "priority": 5,
                 "allowed_indices": '["products", "articles"]',
                 "is_active": True,
+                "daily_request_limit": 100,
+                "monthly_request_limit": 2000,
+                "max_results_per_request": 1000,
             },
             {
                 "id": str(uuid.uuid4()),
                 "username": "premium_user",
                 "email": "premium@example.com",
                 "hashed_password": hash_password("premium_password456"),
-                "full_name": "Premium Test User",
                 "profile_type": "premium",
-                "priority": 8,
                 "allowed_indices": '["products", "articles", "logs-prod"]',
                 "is_active": True,
+                "daily_request_limit": 500,
+                "monthly_request_limit": 10000,
+                "max_results_per_request": 5000,
             },
         ]
 
         # Using text() for SQL statement to avoid ORM dependency in this script
         user_insert_stmt = text(
             """
-            INSERT INTO users (id, username, email, hashed_password, full_name, profile_type, priority, allowed_indices, is_active)
-            VALUES (:id, :username, :email, :hashed_password, :full_name, :profile_type, :priority, :allowed_indices, :is_active)
+            INSERT INTO users (id, username, email, hashed_password, profile_type, allowed_indices, is_active, 
+                             daily_request_limit, monthly_request_limit, max_results_per_request)
+            VALUES (:id, :username, :email, :hashed_password, :profile_type, :allowed_indices, :is_active,
+                   :daily_request_limit, :monthly_request_limit, :max_results_per_request)
             ON CONFLICT (username) DO NOTHING;
             """
         )
         await conn.execute(user_insert_stmt, users_to_create)
         print(f"-> {len(users_to_create)} users created or already exist.")
 
-        # --- 2. Create Incoming Requests ---
-        print("Creating sample incoming requests...")
-        basic_user_id = users_to_create[1]['id']
-        premium_user_id = users_to_create[2]['id']
-
-        requests_to_create = [
-            {
-                "id": str(uuid.uuid4()),
-                "original_request_id": "a1b2c3d4-e5f6-7788-9900-aabbccddeeff",
-                "original_user_id": basic_user_id,
-                "query_type": "match",
-                "query_params": '{"field": "content", "query": "hello world"}',
-                "priority": 5,
-                "status": "pending",
-                "original_timestamp": datetime.now(timezone.utc),
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "original_request_id": "b2c3d4e5-f6a7-8899-0011-bbccddeeff00",
-                "original_user_id": premium_user_id,
-                "query_type": "aggregation",
-                "query_params": '{"type": "terms", "field": "category.keyword"}',
-                "priority": 8,
-                "status": "pending",
-                "original_timestamp": datetime.now(timezone.utc),
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "original_request_id": "c3d4e5f6-a7b8-9900-1122-ccddeeff0011",
-                "original_user_id": premium_user_id,
-                "query_type": "bool",
-                "query_params": '{"must": [{"match": {"title": "test"}}], "filter": [{"term": {"tags": "urgent"}}]}',
-                "priority": 9,
-                "status": "pending",
-                "original_timestamp": datetime.now(timezone.utc),
-            },
-        ]
-
-        request_insert_stmt = text(
-            """
-            INSERT INTO incoming_requests (id, original_request_id, original_user_id, query_type, query_params, priority, status, original_timestamp)
-            VALUES (:id, :original_request_id, :original_user_id, :query_type, :query_params, :priority, :status, :original_timestamp)
-            ON CONFLICT (id) DO NOTHING;
-            """
-        )
-        await conn.execute(request_insert_stmt, requests_to_create)
-        print(f"-> {len(requests_to_create)} incoming requests created.")
+        # Skip incoming requests for now - they will be created when requests are imported
+        print("Skipping sample incoming requests (will be created via file import).")
 
         await conn.commit()
         print("\n--- Seeding completed successfully! ---")
