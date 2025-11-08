@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 from workers.celery_app import celery_app
 from workers.database import get_db_session
 from workers.redis_client import redis_client
-from api.models.request import Request
-from api.models.response import Response
+from ...api.models.request import Request
+from ...api.models.response import Response
 
 
 @celery_app.task(name="process_response_from_redis")

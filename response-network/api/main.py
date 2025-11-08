@@ -1,7 +1,6 @@
 import logging
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import redis
 from fastapi import Depends, FastAPI, HTTPException
@@ -10,14 +9,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
-from core.config import settings
-from db.session import get_db_session as get_db
-from router.request_router import router as request_router
-from router.system_router import router as system_router
-from router.user_router import router as user_router
-from router.monitoring_router import router as monitoring_router
-from router.stats_router import router as stats_router
-from router.search_router import router as search_router
+from .core.config import settings
+from .db.session import get_db_session as get_db
+from .router.request_router import router as request_router
+from .router.system_router import router as system_router
+from .router.user_router import router as user_router
+from .router.monitoring_router import router as monitoring_router
+from .router.stats_router import router as stats_router
+from .router.search_router import router as search_router
 from router.settings_router import router as settings_router
 from router.request_type_router import router as request_type_router
 from auth.security import get_current_user

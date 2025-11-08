@@ -4,9 +4,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.dependencies import get_current_admin_user
-from api.db.session import get_db
-from api.models.user import User
+from ..auth.dependencies import get_current_admin_user
+from ..db.session import get_db
+from ..models.user import User
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

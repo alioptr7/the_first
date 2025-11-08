@@ -4,11 +4,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.dependencies import get_current_admin_user
-from api.core.config import settings
-from api.db.session import get_db
-from api.models.user import User
-from api.schemas.user import UserCreate, UserResponse, UserUpdate
+from ..auth.dependencies import get_current_admin_user
+from ..core.config import settings
+from ..db.session import get_db
+from ..models.user import User
+from ..schemas.user import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(
     prefix="/admin",

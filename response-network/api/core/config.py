@@ -1,11 +1,8 @@
 """تنظیمات API"""
 from typing import List
 
-from dotenv import load_dotenv
 from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-load_dotenv("api/.env")
 
 class Settings(BaseSettings):
     """تنظیمات برنامه"""
@@ -22,18 +19,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000"]
 
     # تنظیمات پایگاه داده
-    RESPONSE_DB_USER: str = "user"
-    RESPONSE_DB_PASSWORD: str = "password"
-    RESPONSE_DB_HOST: str = "localhost"
-    RESPONSE_DB_PORT: str = "5433"
-    RESPONSE_DB_NAME: str = "response_db"
-    DATABASE_URL: str = ""
-
-    @property
-    def DATABASE_CONNECTION_URL(self) -> str:
-        """آدرس اتصال به پایگاه داده"""
-        self.DATABASE_URL = f"postgresql+asyncpg://{self.RESPONSE_DB_USER}:{self.RESPONSE_DB_PASSWORD}@{self.RESPONSE_DB_HOST}:{self.RESPONSE_DB_PORT}/{self.RESPONSE_DB_NAME}"
-        return self.DATABASE_URL
+    DATABASE_URL: str
 
     # تنظیمات Redis
     REDIS_HOST: str = "localhost"
@@ -63,7 +49,7 @@ class Settings(BaseSettings):
 
 
     model_config = SettingsConfigDict(
-        env_file="api/.env",
+        env_file="z:/Newfolder/the_first/response-network/api/.env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"

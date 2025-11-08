@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from api.db.base_class import Base
+from ..db.base_class import Base
 
 class Request(Base):
     __tablename__ = "requests"

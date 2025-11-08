@@ -7,7 +7,7 @@ from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from api.db.base_class import Base
+from ..db.base_class import Base
 
 
 class RequestTypeParameter(Base):

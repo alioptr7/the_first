@@ -1,6 +1,11 @@
 import asyncio
 from typing import AsyncGenerator, Generator
 from datetime import timedelta
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'api', '.env'))
 
 import pytest
 from fastapi import FastAPI

@@ -2,7 +2,7 @@
 from celery import Celery
 from celery.schedules import crontab
 
-from workers.config import settings
+from .config import settings
 
 celery_app = Celery(
     "response_network",

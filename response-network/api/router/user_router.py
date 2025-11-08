@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from ..core.dependencies import get_db
-from ..models.model_schemas import UserCreate, UserUpdate, User, UserWithStats
+from ..schemas.user import UserCreate, UserUpdate, User, UserWithStats
 from ..models.user import User as UserModel
 from ..auth.dependencies import get_current_admin_user, get_current_active_user
 from ..crud import users as user_service

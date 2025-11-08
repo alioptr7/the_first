@@ -5,8 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 
-from shared.file_format_handler import calculate_checksum
-from shared.schemas.transfer import RequestBatch
+from ..shared.file_format_handler import calculate_checksum
+from ..shared.schemas.transfer import RequestBatch
 from workers.celery_app import celery_app
 from workers.redis_client import redis_client
 

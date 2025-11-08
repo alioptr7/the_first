@@ -4,8 +4,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from shared.file_format_handler import decrypt_file, verify_checksum
-from shared.schemas.transfer import ResponseBatch, ResponseTransferSchema
+from ..shared.file_format_handler import decrypt_file, verify_checksum
+from ..shared.schemas.transfer import ResponseBatch, ResponseTransferSchema
 from workers.celery_app import celery_app
 from workers.redis_client import redis_client
 

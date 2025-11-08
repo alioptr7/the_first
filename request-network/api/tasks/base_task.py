@@ -5,8 +5,8 @@ from uuid import UUID
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.db.session import async_session_factory
-from api.models.task_logs import TaskLogs
+from ..db.session import async_session_factory
+from ..models.task_logs import TaskLogs
 
 
 class BaseTask:

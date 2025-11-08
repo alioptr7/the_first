@@ -6,10 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from core.config import settings
-from db.base import Base
-from db.session import engine, get_db
-from routers import (
+from api.core.config import settings
+from api.db.base import Base
+from api.db.session import engine, get_db
+from api.routers import (
     admin_router,
     auth_router,
     monitoring_router,

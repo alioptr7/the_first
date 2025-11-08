@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from pydantic import ValidationError
 
-from shared.schemas import (
+from ...shared.schemas import (
     RequestTransferSchema,
     ResponseTransferSchema,
     BatchMetadataSchema,

@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from sqlalchemy import Column, DateTime, String, Integer, JSON, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 
-from api.db.base_class import Base
+from ..db.base_class import Base
 
 
 class LogEntry(Base):

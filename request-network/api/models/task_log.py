@@ -9,7 +9,7 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from api.db.base_class import Base
+from ..db.base_class import Base
 
 
 class TaskLog(Base):

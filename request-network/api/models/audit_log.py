@@ -4,7 +4,7 @@ from sqlalchemy import String, Integer, Column, ForeignKey, Text, BigInteger
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
 from sqlalchemy.orm import Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from ...shared.database.base import BaseModel
 
 class AuditLog(BaseModel):
     __tablename__ = "audit_logs"

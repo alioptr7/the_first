@@ -5,7 +5,7 @@ from sqlalchemy import String, Integer, DateTime, ForeignKey, Text, Float
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from ...shared.database.base import BaseModel
 
 class Request(BaseModel):
     """

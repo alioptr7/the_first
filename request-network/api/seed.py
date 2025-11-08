@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
-from shared.auth.security import get_password_hash
+from auth.security import get_password_hash
 
 # --- Path Setup ---
 # This allows the script to find modules in the 'api' and 'shared' directories.

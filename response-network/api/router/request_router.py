@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from api.core.dependencies import get_db
-from api.models.model_schemas import (
+from ..schemas.request import (
     Request, RequestCreate, RequestUpdate, RequestStats,
     PaginatedResponse
 )

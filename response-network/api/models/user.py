@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import Boolean, String, Integer, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from api.db.base_class import Base
+from ..db.base_class import Base
 
 
 class User(Base):

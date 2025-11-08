@@ -5,7 +5,7 @@ from typing import Optional
 from sqlalchemy import Column, DateTime, Integer, String, JSON
 from sqlalchemy.orm import relationship
 
-from db.base_class import Base, TimestampMixin
+from api.db.base_class import Base, TimestampMixin
 
 
 class TaskLog(Base, TimestampMixin):
