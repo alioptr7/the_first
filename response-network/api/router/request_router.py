@@ -3,16 +3,16 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from response_network.api.core.dependencies import get_db
-from response_network.api.models.schemas import (
+from core.dependencies import get_db
+from models.schemas import (
     Request, RequestCreate, RequestUpdate, RequestStats,
     PaginatedResponse
 )
-from ..models.user import User
-from ..auth.dependencies import get_current_user
-from ..crud import requests as request_service
+from models.user import User
+from auth.dependencies import get_current_user
+from crud import requests as request_service
 
-router = APIRouter(prefix="/api", tags=["requests"])
+router = APIRouter(tags=["requests"])
 
 @router.get("/requests", response_model=PaginatedResponse)
 async def list_requests(

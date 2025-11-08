@@ -11,11 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
 # Import core modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from response_network.api.core.config import settings
-from response_network.api.db.session import get_db_session, async_session
-from response_network.api.router import request_router, system_router, user_router, monitoring_router, stats_router, search_router
-from response_network.api.router import auth_router
+from core.config import settings
+from db.session import get_db_session, async_session
+from router import request_router, system_router, user_router, monitoring_router, stats_router, search_router
+from router import auth_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ app = FastAPI(
 )
 
 # Configure Security
-from .auth.dependencies import oauth2_scheme
+from auth.dependencies import oauth2_scheme
 
 # Set all CORS enabled origins
 app.add_middleware(

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union
 import jwt
 import bcrypt
-from response_network.api.core.config import settings
+from core.config import settings
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""

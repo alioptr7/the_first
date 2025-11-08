@@ -3,8 +3,8 @@ from sqlalchemy import func, select
 from typing import List, Optional
 from datetime import datetime
 
-from response_network.api.models.request import Request
-from response_network.api.models.schemas import RequestStats
+from models.request import Request
+from models.schemas import RequestStats
 
 async def get_requests(
     db: AsyncSession,

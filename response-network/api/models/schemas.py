@@ -12,7 +12,7 @@ class PaginatedResponse(BaseModel):
     page: int
     size: int
 
-from ..schemas.user import UserBase, UserCreate, UserUpdate, UserStats, UserWithStats, UserRead as User
+from response_network.api.schemas.user import UserBase, UserCreate, UserUpdate, UserStats, UserWithStats, UserRead as User
 
 class RequestBase(BaseModel):
     content: Dict

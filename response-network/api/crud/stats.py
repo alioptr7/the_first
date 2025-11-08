@@ -3,9 +3,9 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from sqlalchemy import func, and_
 
-from response_network.api.models.request import Request
-from response_network.api.models.query_result import QueryResult
-from response_network.api.models.schemas import (
+from models.request import Request
+from models.query_result import QueryResult
+from models.schemas import (
     RequestStats,
     QueryStats,
     SystemHealth,

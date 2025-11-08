@@ -7,9 +7,9 @@ from typing import Optional, Annotated
 from datetime import datetime
 import json
 
-from response_network.api.core.config import settings
-from response_network.api.core.dependencies import get_db
-from response_network.api.models.user import User
+from core.config import settings
+from core.dependencies import get_db
+from models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 

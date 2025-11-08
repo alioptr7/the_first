@@ -1,2 +1,2 @@
-from .stats import ResponseNetworkStats
+from .token import Token, TokenData
 from .user import UserRead

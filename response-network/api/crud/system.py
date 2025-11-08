@@ -5,9 +5,9 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import logging
 
-from response_network.api.models.schemas import SystemStats, SystemHealth, LogEntry
-from response_network.api.models.request import Request
-from response_network.api.workers.elasticsearch_client import ElasticsearchClient
+from models.schemas import SystemStats, SystemHealth, LogEntry
+from models.request import Request
+from workers.elasticsearch_client import ElasticsearchClient
 
 async def get_system_stats(db: AsyncSession) -> SystemStats:
     """Get current system resource usage and performance metrics."""

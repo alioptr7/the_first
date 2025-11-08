@@ -13,9 +13,9 @@ sys.path.insert(0, root_path)
 
 # Import the models
 from shared.database.base import Base
-from response_network.api.models.user import User
-from response_network.api.models.request import Request
-from response_network.api.models.batch import ExportBatch, ImportBatch
+from models.user import User
+from models.request import Request
+from models.batch import ExportBatch, ImportBatch
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

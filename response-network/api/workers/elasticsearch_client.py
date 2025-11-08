@@ -3,7 +3,7 @@ from datetime import datetime
 import json
 import logging
 
-from response_network.api.core.config import settings
+from core.config import settings
 
 class ElasticsearchClient:
     def __init__(self, hosts=None):

@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from passlib.context import CryptContext
 
-from response_network.api.db.session import SessionLocal
-from response_network.api.models.user import User
-from response_network.api.models.settings import Settings, UserSettings
-from response_network.api.models.request_type import RequestType
-from response_network.api.models.request_type_parameter import RequestTypeParameter
-from response_network.api.models.user_request_access import UserRequestAccess
+from db.session import SessionLocal
+from models.user import User
+from models.settings import Settings, UserSettings
+from models.request_type import RequestType
+from models.request_type_parameter import RequestTypeParameter
+from models.user_request_access import UserRequestAccess
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

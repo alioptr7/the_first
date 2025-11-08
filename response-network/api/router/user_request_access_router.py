@@ -6,12 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ..auth.dependencies import get_current_active_user, get_current_admin_user
-from ..core.dependencies import get_db as get_db_session
-from ..models.request_type import RequestType
-from ..models.user import User
-from ..models.user_request_access import UserRequestAccess
-from ..schemas.user_request_access import (
+from response_network.api.auth.dependencies import get_current_active_user, get_current_admin_user
+from response_network.api.core.dependencies import get_db as get_db_session
+from response_network.api.models.request_type import RequestType
+from response_network.api.models.user import User
+from response_network.api.models.user_request_access import UserRequestAccess
+from response_network.api.schemas.user_request_access import (
     UserRequestAccessCreate,
     UserRequestAccessRead,
     UserRequestAccessUpdate

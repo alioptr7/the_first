@@ -9,11 +9,11 @@ security = HTTPBearer()
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .schemas import TokenData
-from response_network.api.core.hashing import get_password_hash, verify_password
-from response_network.api.db.session import get_db_session
-from response_network.api.models.user import User
-from response_network.api.core.config import settings
+from schemas.token import TokenData
+from core.hashing import get_password_hash, verify_password
+from db.session import get_db_session
+from models.user import User
+from core.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM

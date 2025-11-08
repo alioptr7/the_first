@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 
-from response_network.api.models.user import User
-from response_network.api.models.request import Request
-from response_network.api.models.schemas import UserCreate, UserUpdate, UserStats
-from response_network.api.core.security import get_password_hash
+from models.user import User
+from models.request import Request
+from models.schemas import UserCreate, UserUpdate, UserStats
+from core.security import get_password_hash
 
 async def get_users_with_stats(
     db: AsyncSession,

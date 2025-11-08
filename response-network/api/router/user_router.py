@@ -3,11 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
 
-from response_network.api.core.dependencies import get_db
-from response_network.api.models.schemas import UserCreate, UserUpdate, User, UserWithStats
-from response_network.api.models.user import User as UserModel
-from response_network.api.auth.dependencies import get_current_admin_user
-from response_network.api.crud import users as user_service
+from core.dependencies import get_db
+from models.schemas import UserCreate, UserUpdate, User, UserWithStats
+from models.user import User as UserModel
+from auth.dependencies import get_current_admin_user
+from crud import users as user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 

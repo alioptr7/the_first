@@ -9,7 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from shared.database.base import Base
-from response_network.api.core.hashing import verify_password
+from core.hashing import verify_password
 
 class User(Base):
     __tablename__ = "users"

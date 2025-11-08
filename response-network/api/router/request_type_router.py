@@ -5,11 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, and_
 
-from ..auth.dependencies import get_current_active_user, get_current_admin_user
-from ..core.dependencies import get_db as get_db_session
-from ..models.request_type import RequestType, RequestTypeParameter
-from ..models.user import User
-from ..schemas.request_type import RequestTypeCreate, RequestTypeRead, RequestTypeUpdate
+from response_network.api.auth.dependencies import get_current_active_user, get_current_admin_user
+from response_network.api.core.dependencies import get_db as get_db_session
+from response_network.api.models.request_type import RequestType, RequestTypeParameter
+from response_network.api.models.user import User
+from response_network.api.schemas.request_type import RequestTypeCreate, RequestTypeRead, RequestTypeUpdate
 
 router = APIRouter(prefix="/request-types", tags=["request-types"])
 
