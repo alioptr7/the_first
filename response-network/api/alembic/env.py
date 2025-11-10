@@ -4,21 +4,22 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
 
-# Add the project root to sys.path
-root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, root_path)
+# Add the project root directory to sys.path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Import the models
+# Import all models here
 from shared.database.base import Base
 from models.user import User
-from models.request import Request
-from models.batch import ExportBatch, ImportBatch
+from models.settings import Settings, UserSettings
+from models.request_type import RequestType
+from models.request_type_parameter import RequestTypeParameter
+from models.user_request_access import UserRequestAccess
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# Load our config
 config = context.config
 
 # Interpret the config file for Python logging.

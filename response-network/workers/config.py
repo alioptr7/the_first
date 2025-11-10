@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     EXPORT_RESULTS_SCHEDULE_SECONDS: int = 120  # 2 minutes
     CACHE_MAINTENANCE_SCHEDULE_SECONDS: int = 3600  # 1 hour
     SYSTEM_MONITORING_SCHEDULE_SECONDS: int = 300  # 5 minutes
+    
+    # Export directories
+    EXPORT_DIR: str = "/app/exports"
+    SETTINGS_EXPORT_SCHEDULE_SECONDS: int = 60  # 1 minute
 
     model_config = SettingsConfigDict(
         env_file=".env",

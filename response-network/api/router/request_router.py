@@ -60,6 +60,23 @@ async def list_requests(
         size=size
     )
 
+@router.get("/requests/stats", response_model=RequestStats)
+async def get_request_stats(
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get statistics about requests in the system.
+    """
+    if not start_date:
+        start_date = datetime.utcnow() - timedelta(days=7)
+    if not end_date:
+        end_date = datetime.utcnow()
+
+    return await request_service.get_request_stats(db, start_date, end_date)
+
 @router.get("/requests/{request_id}", response_model=Request)
 async def get_request(
     request_id: int,
@@ -73,8 +90,6 @@ async def get_request(
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
     return request
-
-@router.get("/requests/stats", response_model=RequestStats)
 async def get_request_stats(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),

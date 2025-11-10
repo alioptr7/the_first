@@ -1,7 +1,8 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime, timezone
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, select
+from sqlalchemy.sql import Select
 
 from models.request import Request
 from models.query_result import QueryResult
@@ -14,28 +15,32 @@ from models.schemas import (
 )
 
 async def get_request_stats(
-    db: Session,
+    db: AsyncSession,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ) -> RequestStats:
     """Get statistics about requests processed by the response network."""
-    query = db.query(Request)
+    query = select(Request)
     
     if start_date:
         start = datetime.fromisoformat(start_date)
-        query = query.filter(Request.created_at >= start)
+        query = query.where(Request.created_at >= start)
     if end_date:
         end = datetime.fromisoformat(end_date)
-        query = query.filter(Request.created_at <= end)
+        query = query.where(Request.created_at <= end)
 
-    total_count = query.count()
-    successful = query.filter(Request.status == "completed").count()
-    failed = query.filter(Request.status == "failed").count()
-    avg_response_time = db.query(
-        func.avg(QueryResult.response_time)
-    ).filter(
-        QueryResult.request_id.in_(query.with_entities(Request.id))
-    ).scalar() or 0.0
+    result = await db.execute(query)
+    requests = result.scalars().all()
+    
+    total_count = len(requests)
+    successful = sum(1 for r in requests if r.status == "completed")
+    failed = sum(1 for r in requests if r.status == "failed")
+    
+    avg_query = select(func.avg(QueryResult.execution_time_ms)).where(
+        QueryResult.request_id.in_([r.id for r in requests])
+    )
+    avg_result = await db.execute(avg_query)
+    avg_response_time = float(avg_result.scalar() or 0) / 1000.0  # Convert ms to seconds
 
     return RequestStats(
         total_count=total_count,
@@ -45,7 +50,7 @@ async def get_request_stats(
     )
 
 async def get_query_stats(
-    db: Session,
+    db: AsyncSession,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ) -> QueryStats:
@@ -59,7 +64,7 @@ async def get_query_stats(
         average_processing_time=0.0
     )
 
-async def get_system_health(db: Session) -> SystemHealth:
+async def get_system_health(db: AsyncSession) -> SystemHealth:
     """Get current system health status."""
     # Check various system components and return health status
     # This will integrate with monitoring tools/services
@@ -74,7 +79,7 @@ async def get_system_health(db: Session) -> SystemHealth:
     )
 
 async def get_system_stats(
-    db: Session,
+    db: AsyncSession,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
 ) -> SystemStats:
@@ -85,11 +90,12 @@ async def get_system_stats(
         cpu_usage=0.0,
         memory_usage=0.0,
         disk_usage=0.0,
-        network_latency=0.0
+        requests_per_minute=0.0,
+        avg_response_time=0.0
     )
 
 async def get_logs(
-    db: Session,
+    db: AsyncSession,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     level: Optional[str] = None,

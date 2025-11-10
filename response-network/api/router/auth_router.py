@@ -17,6 +17,14 @@ from models.schemas import Token
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.get("/me", response_model=UserRead)
+async def read_users_me(
+    current_user: Annotated[User, Depends(security.get_current_user)]
+):
+    """Get information about the currently authenticated user."""
+    return current_user
+
+
 @router.post("/login", response_model=Token)
 async def login(
     response: Response,

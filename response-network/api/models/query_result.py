@@ -4,10 +4,10 @@ from sqlalchemy import String, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from shared.database.base import BaseModel, UUIDMixin, TimestampMixin
 
 
-class QueryResult(BaseModel):
+class QueryResult(BaseModel, UUIDMixin, TimestampMixin):
     __tablename__ = "query_results"
 
     request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("incoming_requests.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)

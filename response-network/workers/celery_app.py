@@ -12,6 +12,7 @@ celery_app = Celery(
         "workers.tasks.export_results",
         "workers.tasks.cache_maintenance",
         "workers.tasks.system_monitoring",
+        "workers.tasks.settings_exporter",
     ],
 )
 
@@ -44,5 +45,9 @@ celery_app.conf.beat_schedule = {
     "run-system-health-check-every-5-minutes": {
         "task": "workers.tasks.system_monitoring.system_health_check",
         "schedule": settings.SYSTEM_MONITORING_SCHEDULE_SECONDS,
+    },
+    "export-settings-every-minute": {
+        "task": "workers.tasks.settings_exporter.export_settings_to_request_network",
+        "schedule": 60.0,  # 1 minute
     },
 }

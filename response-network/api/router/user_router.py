@@ -1,13 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
+from uuid import UUID
+from sqlalchemy import select, delete, and_
 
 from core.dependencies import get_db
 from models.schemas import UserCreate, UserUpdate, User, UserWithStats
 from models.user import User as UserModel
+from models.request_type import RequestType
+from models.request_access import UserRequestAccess
 from auth.dependencies import get_current_admin_user
 from crud import users as user_service
+from schemas.request_access import UserRequestAccessCreate, UserRequestAccessRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -32,12 +37,129 @@ async def list_users(
         limit=limit
     )
 
+@router.get("/me", response_model=UserWithStats)
+async def get_current_user(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    Get detailed information about the currently authenticated user including their request statistics.
+    """
+    return await user_service.get_user_with_stats(db, current_user.id)
+
 @router.get("/{user_id}", response_model=UserWithStats)
 async def get_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_admin_user)
 ):
+    """Get detailed information about a specific user."""
+    return await user_service.get_user_with_stats(db, user_id)
+
+
+@router.post("/{user_id}/request-access", response_model=List[UserRequestAccessRead])
+async def grant_request_type_access(
+    user_id: UUID,
+    request_types: List[UserRequestAccessCreate],
+    current_user: UserModel = Depends(get_current_admin_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Grant access to multiple request types for a user.
+    Only admin users can grant access.
+    """
+    # Verify user exists
+    user = await session.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with ID {user_id} not found"
+        )
+    
+    # Verify request types exist
+    request_type_ids = [rt.request_type_id for rt in request_types]
+    result = await session.execute(
+        select(RequestType).where(RequestType.id.in_(request_type_ids))
+    )
+    found_types = {rt.id: rt for rt in result.scalars().all()}
+    
+    missing_types = set(request_type_ids) - set(found_types.keys())
+    if missing_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Request types not found: {', '.join(str(rid) for rid in missing_types)}"
+        )
+    
+    # Remove existing access for these request types
+    await session.execute(
+        delete(UserRequestAccess).where(and_(
+            UserRequestAccess.user_id == user_id,
+            UserRequestAccess.request_type_id.in_(request_type_ids)
+        ))
+    )
+    
+    # Create new access records
+    access_records = []
+    for rt_access in request_types:
+        access = UserRequestAccess(
+            user_id=user_id,
+            request_type_id=rt_access.request_type_id,
+            max_requests_per_hour=rt_access.max_requests_per_hour,
+            is_active=rt_access.is_active
+        )
+        session.add(access)
+        access_records.append(access)
+    
+    await session.commit()
+    for record in access_records:
+        await session.refresh(record)
+    
+    return access_records
+
+
+@router.get("/{user_id}/request-access", response_model=List[UserRequestAccessRead])
+async def list_user_request_access(
+    user_id: UUID,
+    current_user: UserModel = Depends(get_current_admin_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    List all request types that this user has access to.
+    Only admin users can view access list.
+    """
+    result = await session.execute(
+        select(UserRequestAccess)
+        .where(UserRequestAccess.user_id == user_id)
+    )
+    return result.scalars().all()
+
+
+@router.delete("/{user_id}/request-access/{request_type_id}")
+async def revoke_request_type_access(
+    user_id: UUID,
+    request_type_id: UUID,
+    current_user: UserModel = Depends(get_current_admin_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Revoke access to a request type from this user.
+    Only admin users can revoke access.
+    """
+    result = await session.execute(
+        delete(UserRequestAccess).where(and_(
+            UserRequestAccess.user_id == user_id,
+            UserRequestAccess.request_type_id == request_type_id
+        ))
+    )
+    
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No access found for request type {request_type_id} for user {user_id}"
+        )
+    
+    await session.commit()
+    return {"status": "success"}
     """
     Get detailed information about a specific user including their request statistics.
     Only admins can access this endpoint.

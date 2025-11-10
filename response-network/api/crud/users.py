@@ -114,29 +114,22 @@ async def get_user_stats(db: AsyncSession, user_id: str) -> UserStats:
         requests_this_month=requests_this_month
     )
 
-async def create_user(db: Session, user_in: UserCreate) -> User:
+async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     """Create a new user."""
-    db_user = User(
-        email=user_in.email,
-        username=user_in.username,
-        full_name=user_in.full_name,
-        hashed_password=get_password_hash(user_in.password),
-        profile_type=user_in.profile_type,
-        is_active=user_in.is_active,
-        requests_per_minute=user_in.requests_per_minute,
-        requests_per_hour=user_in.requests_per_hour,
-        requests_per_day=user_in.requests_per_day,
-        total_requests_allocated=user_in.total_requests_allocated,
-        remaining_requests=user_in.total_requests_allocated
-    )
+    # Convert UserCreate to dict, excluding password
+    user_data = user_in.model_dump(exclude={'password'})
+    # Add hashed password
+    user_data['hashed_password'] = get_password_hash(user_in.password)
+    # Create user instance
+    db_user = User(**user_data)
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
-async def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
+async def update_user(db: AsyncSession, user: User, user_in: UserUpdate) -> User:
     """Update user information."""
-    update_data = user_in.dict(exclude_unset=True)
+    update_data = user_in.model_dump(exclude_unset=True)
     
     if update_data.get("password"):
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
@@ -145,8 +138,8 @@ async def update_user(db: Session, user: User, user_in: UserUpdate) -> User:
         setattr(user, field, value)
     
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
 async def delete_user(db: Session, user_id: int) -> None:

@@ -2,12 +2,16 @@ import asyncio
 from datetime import datetime
 import uuid
 from typing import List
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from passlib.context import CryptContext
 
-from db.session import SessionLocal
+from db.session import async_session
 from models.user import User
 from models.settings import Settings, UserSettings
 from models.request_type import RequestType
@@ -23,9 +27,11 @@ async def create_admin_user(db: AsyncSession) -> User:
     
     if not admin:
         admin = User(
+            username="admin",
             email="admin@example.com",
             full_name="System Administrator",
             hashed_password=pwd_context.hash("admin123"),
+            profile_type="admin",
             is_active=True,
             is_admin=True
         )
@@ -45,9 +51,11 @@ async def create_test_user(db: AsyncSession) -> User:
     
     if not test_user:
         test_user = User(
+            username="test",
             email="test@example.com",
             full_name="Test User",
             hashed_password=pwd_context.hash("test123"),
+            profile_type="user",
             is_active=True,
             is_admin=False
         )
@@ -79,23 +87,32 @@ async def create_system_settings(db: AsyncSession):
     await db.commit()
     print("⚙️ System settings created")
 
-async def create_request_types(db: AsyncSession) -> List[RequestType]:
+async def create_request_types(db: AsyncSession, admin_user: User) -> List[RequestType]:
     # Create sample request types
     request_types_data = [
         {
             "name": "Standard Request",
             "description": "Basic request type for general purposes",
-            "is_active": True
+            "is_active": True,
+            "created_by_id": admin_user.id,
+            "max_items_per_request": 1,
+            "version": "1.0.0"
         },
         {
             "name": "Premium Request",
             "description": "Advanced request type with priority handling",
-            "is_active": True
+            "is_active": True,
+            "created_by_id": admin_user.id,
+            "max_items_per_request": 10,
+            "version": "1.0.0"
         },
         {
             "name": "Batch Request",
             "description": "For processing multiple items at once",
-            "is_active": True
+            "is_active": True,
+            "created_by_id": admin_user.id,
+            "max_items_per_request": 100,
+            "version": "1.0.0"
         }
     ]
     
@@ -189,13 +206,14 @@ async def create_user_request_access(db: AsyncSession, user: User, request_types
             )
         )
         if not result.scalar_one_or_none():
+            # Set access type based on index - first gets ADMIN, others get WRITE
+            access_type = "admin" if i == 0 else "write"
             access = UserRequestAccess(
                 user_id=user.id,
                 request_type_id=rt.id,
-                can_create=True,
-                can_read=True,
-                can_update=i < 2,  # Only for first two request types
-                can_delete=i == 0   # Only for first request type
+                access_type=access_type,
+                allowed_indices=["*"],  # Allow all indices by default
+                is_active=True
             )
             db.add(access)
     
@@ -204,7 +222,7 @@ async def create_user_request_access(db: AsyncSession, user: User, request_types
 
 async def main():
     print("\n🌱 Starting database seeding...")
-    async with SessionLocal() as db:
+    async with async_session() as db:
         # Create users
         admin = await create_admin_user(db)
         test_user = await create_test_user(db)
@@ -214,7 +232,7 @@ async def main():
         await create_user_settings(db, test_user)
         
         # Create request types and parameters
-        request_types = await create_request_types(db)
+        request_types = await create_request_types(db, admin)
         await create_request_type_parameters(db, request_types)
         
         # Create user access

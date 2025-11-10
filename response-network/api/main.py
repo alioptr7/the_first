@@ -3,6 +3,8 @@ import sys
 import os
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 import redis
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
@@ -13,8 +15,9 @@ from fastapi.security import OAuth2PasswordBearer
 # Import core modules
 from core.config import settings
 from db.session import get_db_session, async_session
-from router import request_router, system_router, user_router, monitoring_router, stats_router, search_router
-from router import auth_router
+from router import request_router, system_router, user_router, monitoring_router, stats_router
+from router import auth_router, request_type_router
+from routers import settings as settings_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +33,8 @@ app = FastAPI(
         {"name": "monitoring", "description": "Monitoring and statistics endpoints"},
         {"name": "auth", "description": "Authentication operations"},
         {"name": "users", "description": "User management operations"},
-        {"name": "requests", "description": "Request handling endpoints"}
+        {"name": "requests", "description": "Request handling endpoints"},
+        {"name": "request-types", "description": "Manage request types and their parameters"}
     ]
 )
 
@@ -76,17 +80,20 @@ app.include_router(
     prefix=settings.API_V1_STR,
 )
 app.include_router(
-    search_router,
+    stats_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(oauth2_scheme)]
 )
 app.include_router(
-    stats_router,
+    request_type_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(oauth2_scheme)]
 )
 # Auth router doesn't need the security scheme as it contains the login endpoint
 app.include_router(auth_router, prefix=settings.API_V1_STR)
+
+# Settings router
+app.include_router(settings_router.router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")

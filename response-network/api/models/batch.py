@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shared.database.base import BaseModel
+from shared.database.base import UUIDMixin
 
 
-class BaseBatch(BaseModel):
+class BaseBatch(BaseModel, UUIDMixin):
     __abstract__ = True
     
     batch_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)

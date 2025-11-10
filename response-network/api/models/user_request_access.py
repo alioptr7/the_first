@@ -6,7 +6,7 @@ from sqlalchemy import String, Boolean, ForeignKey, DateTime, JSON, Enum, Unique
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, ARRAY
 
-from shared.database.base import BaseModel
+from shared.database.base import BaseModel, UUIDMixin, TimestampMixin
 import enum
 
 
@@ -16,7 +16,7 @@ class AccessType(str, enum.Enum):
     ADMIN = "admin"
 
 
-class UserRequestAccess(BaseModel):
+class UserRequestAccess(BaseModel, UUIDMixin, TimestampMixin):
     __tablename__ = "user_request_access"
     __table_args__ = (
         UniqueConstraint('user_id', 'request_type_id', name='uix_user_request_type'),
@@ -27,7 +27,10 @@ class UserRequestAccess(BaseModel):
     access_type: Mapped[AccessType] = mapped_column(Enum(AccessType), nullable=False)
     allowed_indices: Mapped[List[str]] = mapped_column(ARRAY(String), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="request_access")
+    request_type: Mapped["RequestType"] = relationship("RequestType", back_populates="access_rules")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships

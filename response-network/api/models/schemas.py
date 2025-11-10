@@ -41,12 +41,17 @@ class Request(RequestBase):
         from_attributes = True
 
 class RequestStats(BaseModel):
-    total: int
-    pending: int
-    processing: int
-    completed: int
-    failed: int
-    avg_processing_time: float
+    total_count: int
+    successful_count: int
+    failed_count: int
+    average_response_time: float
+
+class SystemHealth(BaseModel):
+    status: str
+    uptime: str
+    last_error: Optional[str] = None
+    last_check: str
+    components: Dict[str, str]
 
 class QueryStats(BaseModel):
     total_count: int

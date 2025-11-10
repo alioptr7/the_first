@@ -4,10 +4,10 @@ from sqlalchemy import String, Integer, DateTime, Column, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from db.base_class import Base
+from shared.database.base import BaseModel, TimestampMixin
 
 
-class IncomingRequest(Base):
+class IncomingRequest(BaseModel, TimestampMixin):
     __tablename__ = "incoming_requests"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

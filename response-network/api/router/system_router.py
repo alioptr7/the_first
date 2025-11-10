@@ -9,7 +9,7 @@ from models.user import User
 from auth.dependencies import get_current_user, get_current_admin_user
 from crud import system as system_service
 
-router = APIRouter(prefix="/api", tags=["system"])
+router = APIRouter(tags=["system"])
 
 @router.get("/stats", response_model=SystemStats)
 async def get_system_stats(

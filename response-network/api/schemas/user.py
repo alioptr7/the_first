@@ -7,8 +7,8 @@ import uuid
 class UserBase(BaseModel):
     """Shared properties for a user."""
     email: EmailStr
-    full_name: str | None = None
     username: str
+    full_name: Optional[str] = None  # Using Optional explicitly
     daily_request_limit: int = 100
     monthly_request_limit: int = 2000
     max_results_per_request: int = 1000
@@ -17,7 +17,7 @@ class UserBase(BaseModel):
 
 class UserRead(UserBase):
     """Properties to return to a client."""
-    id: uuid.UUID
+    id: int
     profile_type: str
     is_active: bool
     daily_request_limit: int
@@ -32,6 +32,9 @@ class UserRead(UserBase):
 class UserCreate(UserBase):
     """Properties to receive via API on creation."""
     password: str
+    profile_type: str = "user"
+    is_active: bool = True
+    is_admin: bool = False
 
 
 class UserUpdate(BaseModel):

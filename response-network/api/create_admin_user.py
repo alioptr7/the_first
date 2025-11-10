@@ -16,7 +16,7 @@ from models.user import User
 DB_USER = "user"
 DB_PASS = "password"
 DB_HOST = "127.0.0.1"
-DB_PORT = "5432"
+DB_PORT = "5433"
 DB_NAME = "response_db"
 
 # Create database URL
@@ -32,13 +32,17 @@ async def create_admin_user():
     async with async_session() as session:
         # Create admin user
         admin_user = User(
-            id=uuid.uuid4(),
             username="admin",
             email="admin@example.com",
             hashed_password=get_password_hash("admin"),
             full_name="Admin User",
             profile_type="admin",
-            is_active=True
+            is_active=True,
+            is_admin=True,
+            daily_request_limit=1000,
+            monthly_request_limit=10000,
+            max_results_per_request=1000,
+            allowed_indices=["*"]
         )
         
         session.add(admin_user)

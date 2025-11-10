@@ -9,7 +9,7 @@ async def test_auth():
             user = await user_service.authenticate(
                 db, 
                 username="admin",
-                password="SuperSecureAdminP@ss!"
+                password="admin"
             )
             if user:
                 print(f"Authentication successful! User: {user.username}")
