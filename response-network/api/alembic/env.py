@@ -1,18 +1,23 @@
 import os
 import sys
+
+# Add the project root directories to sys.path
+response_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+if response_root not in sys.path:
+    sys.path.insert(0, response_root)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
-# Add the project root directory to sys.path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
 # Import all models here
 from shared.database.base import Base
+from shared.models.worker_settings import WorkerSettings
 from models.user import User
 from models.settings import Settings, UserSettings
 from models.request_type import RequestType

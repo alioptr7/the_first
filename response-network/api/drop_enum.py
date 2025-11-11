@@ -1,10 +1,14 @@
-from sqlalchemy import create_engine, text
+import asyncio
+from sqlalchemy import text
+from db.session import async_session
 
-def main():
-    engine = create_engine('postgresql://user:password@localhost:5433/response_db')
-    with engine.connect() as conn:
-        conn.execute(text("DROP TYPE IF EXISTS accesstype CASCADE;"))
-        conn.commit()
+async def drop_enums():
+    """Drop all enum types."""
+    async with async_session() as session:
+        # Drop enum types
+        await session.execute(text("DROP TYPE IF EXISTS accesstype CASCADE"))
+        await session.commit()
+        print("Successfully dropped enum types.")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(drop_enums())

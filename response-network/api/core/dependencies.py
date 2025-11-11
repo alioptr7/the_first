@@ -13,3 +13,13 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+async def get_current_superuser(token: str = None):
+    """Get current superuser from token."""
+    # This is a placeholder - implement based on your auth logic
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    return None

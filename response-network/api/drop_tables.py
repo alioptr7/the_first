@@ -11,6 +11,7 @@ async def drop_all():
         'settings',
         'requests',
         'users',
+        'query_results',
         'alembic_version'
     ]
     

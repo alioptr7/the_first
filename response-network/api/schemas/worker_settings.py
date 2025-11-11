@@ -17,6 +17,11 @@ class ScheduleType(str, Enum):
     CRONTAB = "crontab"
     INTERVAL = "interval"
     
+class StorageTestResponse(BaseModel):
+    """Storage test response schema."""
+    success: bool
+    message: str
+
 class StorageConfigBase(BaseModel):
     """Base storage configuration."""
     path: str = Field(..., description="Base path for storage")

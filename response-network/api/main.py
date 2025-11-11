@@ -16,8 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from core.config import settings
 from db.session import get_db_session, async_session
 from router import request_router, system_router, user_router, monitoring_router, stats_router
-from router import auth_router, request_type_router
-from routers import settings as settings_router
+from router import auth_router, request_type_router, worker_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -92,8 +91,8 @@ app.include_router(
 # Auth router doesn't need the security scheme as it contains the login endpoint
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 
-# Settings router
-app.include_router(settings_router.router, prefix=settings.API_V1_STR)
+# Worker settings router
+app.include_router(worker_settings.router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")
