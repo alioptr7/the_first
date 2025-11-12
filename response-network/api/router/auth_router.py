@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from auth import security
 from core.config import settings
+from core.hashing import verify_password
 from db.session import get_db_session
 from models.user import User
 from schemas.user import UserRead
@@ -46,7 +47,7 @@ async def login(
     if (
         not user
         or not user.is_active
-        or not security.verify_password(form_data.password, user.hashed_password)
+        or not verify_password(form_data.password, user.hashed_password)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,18 +67,11 @@ async def login(
         data=token_data,
         expires_delta=access_token_expires
     )
-    access_token = security.create_access_token(
-        data={
-            "user_id": str(user.id),
-            "scopes": ["admin"] if user.profile_type == "admin" else [],
-        },
-        expires_delta=access_token_expires,
-    )
 
     # 4. Set the token in an HttpOnly cookie
     response.set_cookie(
         key="access_token",
-        value=access_token,  # No bearer prefix for simplicity
+        value=access_token,
         httponly=True,
         secure=not settings.DEV_MODE,
         samesite="lax",
@@ -88,14 +82,6 @@ async def login(
         "access_token": access_token,
         "token_type": "bearer"
     }
-
-
-@router.get("/me", response_model=UserRead, summary="Get Current User")
-async def read_users_me(
-    current_user: Annotated[User, Depends(security.get_current_user)],
-):
-    """Get the current logged-in user's details."""
-    return current_user
 
 
 @router.post("/logout", summary="Admin Logout")

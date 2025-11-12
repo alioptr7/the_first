@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 from core.config import settings
 from db.session import get_db_session, async_session
 from router import request_router, system_router, user_router, monitoring_router, stats_router
-from router import auth_router, request_type_router, worker_settings
+from router import auth_router, request_type_router, worker_settings, profile_type_router, settings_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,7 +33,8 @@ app = FastAPI(
         {"name": "auth", "description": "Authentication operations"},
         {"name": "users", "description": "User management operations"},
         {"name": "requests", "description": "Request handling endpoints"},
-        {"name": "request-types", "description": "Manage request types and their parameters"}
+        {"name": "request-types", "description": "Manage request types and their parameters"},
+        {"name": "profile types", "description": "User profile types management"}
     ]
 )
 
@@ -93,6 +94,12 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 
 # Worker settings router
 app.include_router(worker_settings.router, prefix=settings.API_V1_STR)
+
+# Settings router
+app.include_router(settings_router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
+
+# Profile types router
+app.include_router(profile_type_router.router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
 
 
 @app.on_event("startup")

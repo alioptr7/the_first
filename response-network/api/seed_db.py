@@ -16,7 +16,7 @@ from models.user import User
 from models.settings import Settings, UserSettings
 from models.request_type import RequestType
 from models.request_type_parameter import RequestTypeParameter
-from models.user_request_access import UserRequestAccess
+from models.request_access import UserRequestAccess
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

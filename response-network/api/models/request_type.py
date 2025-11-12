@@ -26,4 +26,4 @@ class RequestType(BaseModel, UUIDMixin, TimestampMixin):
 
     # Relationships
     parameters: Mapped[List["RequestTypeParameter"]] = relationship("RequestTypeParameter", back_populates="request_type", cascade="all, delete-orphan")
-    access_rules: Mapped[List["UserRequestAccess"]] = relationship("UserRequestAccess", back_populates="request_type")
+    user_access: Mapped[List["UserRequestAccess"]] = relationship("UserRequestAccess", back_populates="request_type")

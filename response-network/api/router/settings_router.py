@@ -1,19 +1,22 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from response_network.api.auth.dependencies import get_current_active_user, get_current_admin_user
-from response_network.api.core.dependencies import get_db as get_db_session
-from response_network.api.models.settings import Settings, UserSettings
-from response_network.api.models.user import User
-from response_network.api.schemas.settings import (
-    SettingCreate,
-    SettingUpdate,
-    SettingRead,
+from auth.dependencies import get_current_active_user, get_current_admin_user
+from core.dependencies import get_db as get_db_session
+from core.config import settings
+from models.settings import Settings as SettingsModel, UserSettings as UserSettingsModel
+from models.user import User
+from schemas.settings import (
+    SettingsCreate,
+    SettingsUpdate,
+    Settings as SettingsSchema,
     UserSettingCreate,
     UserSettingUpdate,
     UserSettingRead
@@ -23,22 +26,96 @@ from workers.tasks.settings_exporter import export_settings_to_request_network
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
+# Export endpoint - send task to Celery
+@router.post("/export/now")
+async def export_settings_now(
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    درخواست اکسپورت تنظیمات.
+    تسک اکسپورت را در صف Celery قرار می‌دهد.
+    """
+    # Send task to Celery queue
+    task = export_settings_to_request_network.delay()
+    
+    return {
+        "message": "درخواست اکسپورت به صف اضافه شد",
+        "task_id": task.id,
+        "status": "pending"
+    }
+
+
+@router.get("/export/status/{task_id}")
+async def get_export_status(
+    task_id: str,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    وضعیت تسک اکسپورت را بررسی کنید.
+    """
+    from celery.result import AsyncResult
+    from workers.celery_app import celery_app
+    
+    task_result = AsyncResult(task_id, app=celery_app)
+    
+    return {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": task_result.result if task_result.status == "SUCCESS" else None,
+        "error": str(task_result.info) if task_result.status == "FAILURE" else None
+    }
+
+
+@router.get("/export/current", dependencies=[Depends(get_current_admin_user)])
+async def get_current_export_settings(
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    نمایش تنظیمات فعلی برای اکسپورت.
+    اکسپورت کننده چه تنظیماتی را ارسال می‌کند؟
+    """
+    # Get all active settings
+    result = await db.execute(
+        select(SettingsModel).where(SettingsModel.is_public == True)
+    )
+    settings_list = result.scalars().all()
+    
+    settings_summary = []
+    for setting in settings_list:
+        settings_summary.append({
+            "key": setting.key,
+            "description": setting.description,
+            "is_public": setting.is_public,
+            "value_keys": list(setting.value.keys()) if isinstance(setting.value, dict) else None,
+            "updated_at": setting.updated_at
+        })
+    
+    return {
+        "total_settings": len(settings_list),
+        "export_timestamp": datetime.utcnow(),
+        "settings": settings_summary,
+        "export_path": "/exports/settings/",
+        "message": "تنظیمات زیر برای اکسپورت ارسال می‌شوند"
+    }
+
+
 # System Settings Endpoints (Admin Only)
-@router.post("/", response_model=SettingRead, dependencies=[Depends(get_current_admin_user)])
+@router.post("/", response_model=SettingsSchema, dependencies=[Depends(get_current_admin_user)])
 async def create_setting(
-    setting: SettingCreate,
+    setting: SettingsCreate,
     db: AsyncSession = Depends(get_db_session),
 ):
     """Create a new system setting (Admin only)"""
     # Check if setting with same key exists
-    existing = await db.execute(select(Settings).where(Settings.key == setting.key))
+    existing = await db.execute(select(SettingsModel).where(SettingsModel.key == setting.key))
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Setting with key '{setting.key}' already exists"
         )
 
-    db_setting = Settings(**setting.model_dump())
+    db_setting = SettingsModel(**setting.model_dump())
     db.add(db_setting)
     await db.commit()
     await db.refresh(db_setting)
@@ -49,33 +126,33 @@ async def create_setting(
     return db_setting
 
 
-@router.get("/", response_model=List[SettingRead])
+@router.get("/", response_model=List[SettingsSchema])
 async def list_settings(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_active_user),
     is_public: Optional[bool] = None
 ):
     """List system settings"""
-    query = select(Settings)
+    query = select(SettingsModel)
     
     # If not admin and is_public not specified, only show public settings
     if not current_user.is_admin and is_public is None:
-        query = query.where(Settings.is_public == True)
+        query = query.where(SettingsModel.is_public == True)
     elif is_public is not None:
-        query = query.where(Settings.is_public == is_public)
+        query = query.where(SettingsModel.is_public == is_public)
     
     result = await db.execute(query)
     return result.scalars().all()
 
 
-@router.get("/{key}", response_model=SettingRead)
+@router.get("/{key}", response_model=SettingsSchema)
 async def get_setting(
     key: str,
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific system setting"""
-    result = await db.execute(select(Settings).where(Settings.key == key))
+    result = await db.execute(select(SettingsModel).where(SettingsModel.key == key))
     setting = result.scalar_one_or_none()
     
     if not setting:
@@ -94,14 +171,14 @@ async def get_setting(
     return setting
 
 
-@router.patch("/{key}", response_model=SettingRead, dependencies=[Depends(get_current_admin_user)])
+@router.patch("/{key}", response_model=SettingsSchema, dependencies=[Depends(get_current_admin_user)])
 async def update_setting(
     key: str,
-    setting: SettingUpdate,
+    setting: SettingsUpdate,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Update a system setting (Admin only)"""
-    result = await db.execute(select(Settings).where(Settings.key == key))
+    result = await db.execute(select(SettingsModel).where(SettingsModel.key == key))
     db_setting = result.scalar_one_or_none()
     
     if not db_setting:
@@ -129,7 +206,7 @@ async def delete_setting(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Delete a system setting (Admin only)"""
-    result = await db.execute(select(Settings).where(Settings.key == key))
+    result = await db.execute(select(SettingsModel).where(SettingsModel.key == key))
     setting = result.scalar_one_or_none()
     
     if not setting:
@@ -155,9 +232,9 @@ async def create_user_setting(
     """Create a new user setting"""
     # Check if setting already exists for user
     result = await db.execute(
-        select(UserSettings).where(
-            UserSettings.user_id == current_user.id,
-            UserSettings.key == setting.key
+        select(UserSettingsModel).where(
+            UserSettingsModel.user_id == current_user.id,
+            UserSettingsModel.key == setting.key
         )
     )
     if result.scalar_one_or_none():
@@ -166,7 +243,7 @@ async def create_user_setting(
             detail=f"Setting '{setting.key}' already exists for this user"
         )
     
-    db_setting = UserSettings(
+    db_setting = UserSettingsModel(
         user_id=current_user.id,
         key=setting.key,
         value=setting.value
@@ -184,7 +261,7 @@ async def list_user_settings(
 ):
     """List settings for the current user"""
     result = await db.execute(
-        select(UserSettings).where(UserSettings.user_id == current_user.id)
+        select(UserSettingsModel).where(UserSettingsModel.user_id == current_user.id)
     )
     return result.scalars().all()
 
@@ -197,9 +274,9 @@ async def get_user_setting(
 ):
     """Get a specific user setting"""
     result = await db.execute(
-        select(UserSettings).where(
-            UserSettings.user_id == current_user.id,
-            UserSettings.key == key
+        select(UserSettingsModel).where(
+            UserSettingsModel.user_id == current_user.id,
+            UserSettingsModel.key == key
         )
     )
     setting = result.scalar_one_or_none()
@@ -222,9 +299,9 @@ async def update_user_setting(
 ):
     """Update a user setting"""
     result = await db.execute(
-        select(UserSettings).where(
-            UserSettings.user_id == current_user.id,
-            UserSettings.key == key
+        select(UserSettingsModel).where(
+            UserSettingsModel.user_id == current_user.id,
+            UserSettingsModel.key == key
         )
     )
     db_setting = result.scalar_one_or_none()
@@ -250,9 +327,9 @@ async def delete_user_setting(
 ):
     """Delete a user setting"""
     result = await db.execute(
-        select(UserSettings).where(
-            UserSettings.user_id == current_user.id,
-            UserSettings.key == key
+        select(UserSettingsModel).where(
+            UserSettingsModel.user_id == current_user.id,
+            UserSettingsModel.key == key
         )
     )
     setting = result.scalar_one_or_none()

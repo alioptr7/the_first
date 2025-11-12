@@ -5,7 +5,7 @@ from .incoming_request import IncomingRequest
 from .query_result import QueryResult
 from .request_type import RequestType
 from .request_type_parameter import RequestTypeParameter
-from .user_request_access import UserRequestAccess
+from .request_access import UserRequestAccess
 
 __all__ = [
     "User",

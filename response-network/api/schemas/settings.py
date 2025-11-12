@@ -3,10 +3,8 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from schemas.base import CamelModel
 
-
-class SettingsBase(CamelModel):
+class SettingsBase(BaseModel):
     """Base settings schema."""
     key: str
     value: dict
@@ -42,3 +40,25 @@ class SettingsExport(BaseModel):
     settings: List[Settings]
     exported_at: datetime = Field(description="UTC timestamp of export")
     version: int = Field(description="Export format version")
+
+
+# User Settings
+class UserSettingCreate(BaseModel):
+    """Schema for creating user settings."""
+    key: str
+    value: dict
+
+
+class UserSettingUpdate(BaseModel):
+    """Schema for updating user settings."""
+    value: dict
+
+
+class UserSettingRead(BaseModel):
+    """Schema for reading user settings."""
+    key: str
+    value: dict
+    user_id: str
+
+    class Config:
+        from_attributes = True
