@@ -1,9 +1,11 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
 from core.config import settings
 
+# Async engine for FastAPI
 engine = create_async_engine(
     str(settings.DATABASE_URL),
     pool_pre_ping=True,
@@ -12,6 +14,23 @@ engine = create_async_engine(
 
 async_session = sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
+# Sync engine for Celery tasks
+sync_database_url = str(settings.DATABASE_URL).replace(
+    "postgresql+asyncpg://",
+    "postgresql://"
+)
+sync_engine = create_engine(
+    sync_database_url,
+    pool_pre_ping=True,
+    echo=False,
+)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=sync_engine,
 )
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

@@ -24,10 +24,21 @@ class ProfileTypeConfig(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(500), nullable=False)
     
     # Permissions and limits
-    permissions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    permissions: Mapped[dict] = mapped_column(
+        JSON, 
+        nullable=False, 
+        default=lambda: {
+            "allowed_request_types": [],
+            "blocked_request_types": [],
+            "max_results_per_request": 1000
+        }
+    )
     daily_request_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
     monthly_request_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=2000)
-    max_results_per_request: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
+    
+    # Rate limits
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    rate_limit_per_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
     
     # Status and metadata
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
@@ -36,3 +47,23 @@ class ProfileTypeConfig(Base, TimestampMixin):
 
     def __repr__(self):
         return f"<ProfileTypeConfig(name={self.name}, display_name={self.display_name})>"
+    
+    def get_allowed_request_types(self) -> list:
+        """Get list of allowed request types for this profile"""
+        return self.permissions.get("allowed_request_types", [])
+    
+    def get_blocked_request_types(self) -> list:
+        """Get list of blocked request types for this profile"""
+        return self.permissions.get("blocked_request_types", [])
+    
+    def is_request_type_allowed(self, request_type: str) -> bool:
+        """Check if a specific request type is allowed for this profile"""
+        allowed = self.get_allowed_request_types()
+        blocked = self.get_blocked_request_types()
+        
+        # اگر allowed list خالی باشد، همه مجاز است (مگر blocked باشند)
+        if not allowed:
+            return request_type not in blocked
+        
+        # اگر allowed list پُر باشد، فقط آن‌ها مجاز هستند
+        return request_type in allowed and request_type not in blocked

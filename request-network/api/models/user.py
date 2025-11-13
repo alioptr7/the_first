@@ -25,10 +25,19 @@ class User(BaseModel):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
     profile_type: Mapped[str] = mapped_column(String(50), nullable=False, default='basic', index=True)
+    
+    # Request Type Access Control
+    allowed_request_types: Mapped[list] = mapped_column(JSONB, nullable=False, server_default='[]')
+    blocked_request_types: Mapped[list] = mapped_column(JSONB, nullable=False, server_default='[]')
+    
+    # Rate Limits
     rate_limit_per_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     rate_limit_per_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
     rate_limit_per_day: Mapped[int] = mapped_column(Integer, nullable=False, default=500)
-    allowed_indices: Mapped[list] = mapped_column(JSONB, nullable=False, server_default='[]')
+    
+    # Daily/Monthly Limits
+    daily_request_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    monthly_request_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=2000)
 
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
@@ -36,6 +45,23 @@ class User(BaseModel):
 
     # Relationship to requests
     requests: Mapped[list["Request"]] = relationship("Request", back_populates="user", cascade="all, delete-orphan")
+
+    def is_request_type_allowed(self, request_type: str) -> bool:
+        """
+        Check if user is allowed to submit this request type.
+        
+        Priority:
+        1. If in blocked_request_types → False
+        2. If allowed_request_types is empty → True (allow all)
+        3. If allowed_request_types is not empty → must be in it
+        """
+        if request_type in self.blocked_request_types:
+            return False
+        
+        if not self.allowed_request_types:  # Empty list = allow all
+            return True
+        
+        return request_type in self.allowed_request_types
 
     def verify_password(self, password: str) -> bool:
         """

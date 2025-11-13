@@ -25,3 +25,16 @@ class User(UserBase):
 
 class UserCreate(UserBase):
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """User request to change own password"""
+    current_password: str
+    new_password: str
+
+
+class PasswordChangeResponse(BaseModel):
+    """Response after password change"""
+    success: bool
+    message: str
+    username: str

@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: response_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-response_network}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PORT: ${DB_PORT:-5432}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - response_network
+
+  # Redis (Broker & Result Backend)
+  redis:
+    image: redis:7-alpine
+    container_name: response_redis
+    command: redis-server --port ${REDIS_PORT:-6380}
+    ports:
+      - "${REDIS_PORT:-6380}:${REDIS_PORT:-6380}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT:-6380}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - response_network
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: response_api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:${DB_PORT:-5432}/${DB_NAME:-response_network}
+      REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      API_V1_STR: /api/v1
+      PROJECT_NAME: Response Network
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./response-network/api/exports:/app/response-network/api/exports
+    command: >
+      bash -c "
+      alembic upgrade head &&
+      python -m uvicorn main:app --host 0.0.0.0 --port 8000
+      "
+    networks:
+      - response_network
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: response_worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:${DB_PORT:-5432}/${DB_NAME:-response_network}
+      REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      API_V1_STR: /api/v1
+      PROJECT_NAME: Response Network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    volumes:
+      - ./response-network/api/exports:/app/response-network/api/exports
+    networks:
+      - response_network
+
+  # Celery Beat Scheduler
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.beat
+    container_name: response_beat
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:${DB_PORT:-5432}/${DB_NAME:-response_network}
+      REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
+      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      API_V1_STR: /api/v1
+      PROJECT_NAME: Response Network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - response_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  response_network:
+    driver: bridge

@@ -17,10 +17,6 @@ class Settings(BaseSettings):
 
     # Redis URL for Celery broker and backend
     REDIS_URL: RedisDsn = "redis://redis-request:6379/0"
-
-    # Task-specific settings
-    EXPORT_SCHEDULE_SECONDS: int = 120  # 2 minutes
-    IMPORT_POLL_SECONDS: int = 30
     
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -45,6 +45,39 @@ class UserUpdate(BaseModel):
     password: str | None = None
 
 
+class ChangePasswordRequest(BaseModel):
+    """Request to change own password (user)"""
+    current_password: str
+    new_password: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_password": "oldPassword123",
+                "new_password": "newPassword456"
+            }
+        }
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request to reset user password (admin)"""
+    new_password: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "new_password": "tempPassword123"
+            }
+        }
+
+
+class PasswordChangeResponse(BaseModel):
+    """Response after password change"""
+    message: str
+    username: str
+    success: bool
+
+
 class UserStats(BaseModel):
     """User statistics."""
     total_requests: int

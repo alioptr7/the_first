@@ -17,6 +17,8 @@ from core.config import settings
 from db.session import get_db_session, async_session
 from router import request_router, system_router, user_router, monitoring_router, stats_router
 from router import auth_router, request_type_router, worker_settings, profile_type_router, settings_router
+from routers import admin_tasks
+from routers import admin_export_control
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -100,6 +102,12 @@ app.include_router(settings_router, prefix=settings.API_V1_STR, dependencies=[De
 
 # Profile types router
 app.include_router(profile_type_router.router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
+
+# Admin tasks router (task queue management)
+app.include_router(admin_tasks.router, dependencies=[Depends(oauth2_scheme)])
+
+# Admin export control router
+app.include_router(admin_export_control.router, dependencies=[Depends(oauth2_scheme)])
 
 
 @app.on_event("startup")

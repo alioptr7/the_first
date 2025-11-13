@@ -46,6 +46,10 @@ class Settings(BaseSettings):
 
     # Redis URL (for Celery stats)
     REDIS_URL: RedisDsn = "redis://localhost:6380/0"
+    
+    # Celery Configuration
+    CELERY_BROKER_URL: str = "redis://localhost:6380/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6380/1"
 
     # Elasticsearch URL for monitoring
     ELASTICSEARCH_URL: AnyHttpUrl = "http://localhost:9200"

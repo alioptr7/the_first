@@ -9,6 +9,7 @@ celery_app = Celery(
     include=[
         "workers.tasks.export_requests",
         "workers.tasks.import_results",
+        "workers.tasks.settings_importer",
         "workers.tasks.cleanup",
     ],
 )
@@ -26,14 +27,11 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
 )
 
-# Celery Beat schedule (for periodic tasks)
+# Celery Beat schedule - Import settings and passwords every 60 seconds
 celery_app.conf.beat_schedule = {
-    "export-pending-requests-every-2-minutes": {
-        "task": "workers.tasks.export_requests.export_pending_requests",
-        "schedule": settings.EXPORT_SCHEDULE_SECONDS,
-    },
-    "import-response-files-every-30-seconds": {
-        "task": "workers.tasks.import_results.import_response_files",
-        "schedule": settings.IMPORT_POLL_SECONDS,
+    "import-settings-and-passwords-every-minute": {
+        "task": "workers.tasks.settings_importer.import_settings_and_passwords",
+        "schedule": 60.0,  # Every 60 seconds
     },
 }
+# Request Network only has reactive tasks (triggered when needed)

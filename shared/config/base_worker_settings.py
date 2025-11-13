@@ -20,7 +20,7 @@ class BaseWorkerSettings:
                 "worker_type": "export_settings",
                 "storage_type": "local",
                 "storage_path": str(BASE_EXPORT_PATH / "settings"),
-                "schedule_expression": "*/15 * * * *",  # every 15 minutes
+                "schedule_expression": "*/1 * * * *",  # every 1 minute
                 "is_active": True,
                 "description": "Base configuration for settings export"
             }

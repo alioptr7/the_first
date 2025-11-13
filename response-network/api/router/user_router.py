@@ -13,6 +13,7 @@ from models.request_access import UserRequestAccess
 from auth.dependencies import get_current_admin_user
 from crud import users as user_service
 from schemas.request_access import UserRequestAccessCreate, UserRequestAccessRead
+from workers.celery_app import celery_app
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -244,3 +245,223 @@ async def activate_user(
         raise HTTPException(status_code=404, detail="User not found")
     await user_service.update_user_status(db, user_id, "active")
     return {"message": "User activated successfully"}
+
+
+@router.post("/export/now")
+async def export_users_now(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    Manually trigger users export to request-network.
+    
+    Returns:
+    - task_id: شناسه task برای بررسی وضعیت
+    - status: وضعیت queue
+    
+    Admin only.
+    """
+    try:
+        task = celery_app.send_task(
+            "workers.tasks.users_exporter.export_users_to_request_network"
+        )
+        return {
+            "status": "accepted",
+            "task_id": task.id,
+            "message": "درخواست export users در صف قرار گرفت"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در ایجاد task: {str(e)}"
+        )
+
+
+@router.get("/export/status/{task_id}")
+async def get_users_export_status(
+    task_id: str,
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    بررسی وضعیت task export.
+    
+    Admin only.
+    """
+    try:
+        task = celery_app.AsyncResult(task_id)
+        return {
+            "task_id": task_id,
+            "state": task.state,
+            "result": task.result if task.successful() else None,
+            "error": str(task.info) if task.failed() else None
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در دریافت وضعیت: {str(e)}"
+        )
+
+
+# ============ Password Management Endpoints ============
+
+@router.post("/{user_id}/reset-password", response_model=dict)
+async def reset_user_password(
+    user_id: str,
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    Reset a user's password (Admin only).
+    
+    **IMPORTANT RULES:**
+    ✅ Only non-admin users can have password reset
+    ❌ Admin users CANNOT have their password reset by another admin
+    ❌ Admin passwords must be changed by themselves
+    
+    **Parameters:**
+    - `user_id`: UUID of the user
+    - `new_password`: The new password to set
+    
+    **Example:**
+    ```json
+    {
+        "new_password": "TempPassword123!"
+    }
+    ```
+    
+    **Returns:**
+    - message: Success message
+    - username: Username of the user whose password was reset
+    
+    **Note:** User must change this temporary password on next login.
+    """
+    from core.hashing import get_password_hash
+    
+    if not request_body.get("new_password"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="new_password is required"
+        )
+    
+    # Get user
+    user = await db.get(UserModel, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found"
+        )
+    
+    # ❌ REJECT admin password resets (ONLY non-admins can be reset)
+    if user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="❌ CANNOT reset admin user password! Admins must change their own password using /users/change-password endpoint."
+        )
+    
+    # Update password for non-admin users only
+    user.hashed_password = get_password_hash(request_body["new_password"])
+    db.add(user)
+    await db.commit()
+    
+    # 🚀 Trigger password sync to Request Network
+    try:
+        from workers.tasks.password_sync import sync_password_to_request_network
+        task = sync_password_to_request_network.delay(
+            user_id=str(user.id),
+            hashed_password=user.hashed_password
+        )
+        sync_task_id = task.id
+        sync_status = "queued"
+    except Exception as e:
+        sync_task_id = None
+        sync_status = f"sync_error: {str(e)}"
+    
+    return {
+        "success": True,
+        "message": f"Password reset for user {user.username}",
+        "username": user.username,
+        "temporary": True,
+        "note": "User should change password on next login",
+        "sync": {
+            "status": sync_status,
+            "task_id": sync_task_id,
+            "message": "Password change is being synced to Request Network"
+        }
+    }
+    
+    # Update password
+    user.hashed_password = get_password_hash(request_body["new_password"])
+    db.add(user)
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Password reset for user {user.username}",
+        "username": user.username,
+        "temporary": True,
+        "note": "User should change password on next login"
+    }
+
+
+@router.post("/change-password", response_model=dict)
+async def change_own_password(
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    Change own password (User endpoint).
+    
+    **Parameters:**
+    - `current_password`: Current password
+    - `new_password`: New password to set
+    
+    **Example:**
+    ```json
+    {
+        "current_password": "oldPassword123",
+        "new_password": "newPassword456"
+    }
+    ```
+    
+    **Returns:**
+    - success: Whether password was changed
+    - message: Success/error message
+    
+    **Note:** User must provide current password for verification.
+    """
+    from core.hashing import verify_password, get_password_hash
+    
+    current_password = request_body.get("current_password")
+    new_password = request_body.get("new_password")
+    
+    if not current_password or not new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="current_password and new_password are required"
+        )
+    
+    if not current_user.verify_password(current_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect"
+        )
+    
+    # Prevent using same password
+    if verify_password(new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password cannot be the same as current password"
+        )
+    
+    # Update password
+    current_user.hashed_password = get_password_hash(new_password)
+    db.add(current_user)
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": "Password changed successfully",
+        "username": current_user.username
+    }

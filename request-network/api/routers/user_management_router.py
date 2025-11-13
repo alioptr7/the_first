@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db.session import get_db_session
-from auth.dependencies import require_admin
+from auth.dependencies import require_admin, get_current_user
 from models.user import User
 from schemas.user import User as UserSchema
 
@@ -98,3 +98,8 @@ async def deactivate_user(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+# ============ NO PASSWORD MANAGEMENT HERE ============
+# Password changes are automatically synced from Response Network
+# via the settings_importer task - see workers/tasks/settings_importer.py

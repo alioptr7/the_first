@@ -1,34 +1,64 @@
 from datetime import datetime
 import json
 from pathlib import Path
-import asyncio
+import redis
 
 from celery import shared_task
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from core.config import settings
-from core.dependencies import get_db
+from core.dependencies import get_db_sync
 from models.settings import Settings as SettingsModel
-from schemas.settings import SettingsExport, Settings as SettingsSchema
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "settings"
 
-@shared_task
-def export_settings_to_request_network():
-    """Export all public settings to file."""
-    async def _export():
+# Redis client for deduplication
+redis_client = redis.from_url(settings.CELERY_BROKER_URL)
+
+@shared_task(bind=True, max_retries=3)
+def export_settings_to_request_network(self):
+    """Export all public settings to file.
+    
+    Features:
+    - Prevents duplicate execution if many queued (uses deduplication key)
+    - Creates timestamped export files
+    - Updates latest.json for easy access
+    """
+    try:
+        # ⏱️ Deduplication: Check if there's a newer task in queue
+        # This prevents executing old queued tasks when worker restarts
+        dedup_key = "export_settings_dedup"
+        current_task_id = self.request.id
+        
+        # Get the last task that was supposed to run
+        last_task_id = redis_client.get(dedup_key)
+        if last_task_id and last_task_id.decode() != current_task_id:
+            # این task قدیمی است، skip کن
+            return {
+                "status": "skipped",
+                "reason": "Newer task in queue",
+                "current_task_id": current_task_id,
+                "skipped_at": datetime.utcnow().isoformat()
+            }
+        
+        # Set this task as the current one
+        redis_client.set(dedup_key, current_task_id, ex=3600)  # 1 hour expiry
+        
         # Create export directory if it doesn't exist
         EXPORT_PATH.mkdir(parents=True, exist_ok=True)
         
         # Get current timestamp for filename
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         
-        async with get_db() as db:
+        # Get synchronous session
+        db = next(get_db_sync())
+        
+        try:
             # Get all public settings
-            result = await db.execute(
-                select(SettingsModel).where(SettingsModel.is_public == True)
-            )
-            all_settings = result.scalars().all()
+            all_settings = db.query(SettingsModel).filter(
+                SettingsModel.is_public == True
+            ).all()
             
             # Prepare export data
             settings_list = []
@@ -60,9 +90,14 @@ def export_settings_to_request_network():
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
             
             return {
+                "status": "success",
                 "export_file": str(export_file),
                 "total_settings": len(settings_list),
                 "exported_at": datetime.utcnow().isoformat()
             }
-    
-    return asyncio.run(_export())
+        finally:
+            db.close()
+            
+    except Exception as exc:
+        # Retry on error
+        raise self.retry(exc=exc, countdown=60)

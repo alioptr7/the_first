@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from core.validation import validate_request_payload
+from core.rate_limiter import RateLimiter
 from db.session import get_db_session
 from models.user import User
 from models.request import Request
@@ -15,6 +16,7 @@ from auth.dependencies import get_current_active_user
 from schemas.request import RequestCreate, RequestPublic, RequestStatus
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
+rate_limiter = RateLimiter()
 
 
 @router.post(
@@ -31,8 +33,9 @@ async def submit_request(
 
     This endpoint handles:
     1. Unique name validation
-    2. Service (index) access verification
-    3. Request creation with elasticsearch query parameters
+    2. Request type access verification (allowed_request_types)
+    3. Rate limiting check
+    4. Request creation with query parameters
     """
     # 1. Check if request name is unique
     existing_request = await db.execute(
@@ -44,19 +47,28 @@ async def submit_request(
             detail=f"Request with name '{request_data.name}' already exists"
         )
 
-    # 2. Check if user has access to the requested service/index
-    allowed_indices = json.loads(current_user.allowed_indices)
-    if request_data.request.serviceName not in allowed_indices:
+    # 2. Check if user is allowed to use this request type
+    request_type = request_data.request.serviceName
+    
+    if not current_user.is_request_type_allowed(request_type):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied to service: {request_data.request.serviceName}"
+            detail=f"Access denied to request type: {request_type}"
+        )
+    
+    # 3. Check rate limits
+    is_allowed, rate_limit_message = rate_limiter.check_rate_limit(current_user)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=rate_limit_message
         )
 
-    # 3. Create request object
+    # 4. Create request object
     new_request = Request(
         user_id=current_user.id,
         name=request_data.name,
-        query_type=request_data.request.serviceName,
+        query_type=request_type,
         query_params=request_data.request.fieldRequest.model_dump(),
         priority=current_user.priority,  # Inherit priority from user profile
         status=request_data.reqState,
@@ -67,6 +79,7 @@ async def submit_request(
     await db.refresh(new_request)
 
     return new_request
+
 
 
 @router.get("/", response_model=List[RequestPublic])
@@ -166,3 +179,24 @@ async def cancel_request(
     await db.commit()
 
     return None
+
+
+@router.get("/rate-limit/status")
+async def get_rate_limit_status(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Get current rate limit status for the logged-in user.
+    
+    Returns:
+    - minute: remaining requests per minute
+    - hour: remaining requests per hour
+    - day: remaining requests per day
+    """
+    remaining = rate_limiter.get_remaining(current_user)
+    return {
+        "user_id": str(current_user.id),
+        "username": current_user.username,
+        "profile_type": current_user.profile_type,
+        "rate_limits": remaining
+    }
