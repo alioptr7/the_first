@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 from core.config import settings
 
 # Initialize celery app
@@ -15,7 +16,20 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    beat_scheduler="celery.beat:PersistentScheduler",
+    beat_schedule={
+        "import-settings-every-60s": {
+            "task": "workers.tasks.settings_importer.import_settings_from_response_network",
+            "schedule": 60.0,  # هر 60 ثانیه
+        },
+    },
 )
 
-# Auto-discover tasks
+# Auto-discover tasks from this package
 celery_app.autodiscover_tasks(["workers.tasks"], force=True)
+
+# Import tasks explicitly to ensure they are registered
+try:
+    from workers.tasks import settings_importer  # noqa
+except ImportError:
+    pass

@@ -30,13 +30,24 @@ class Settings(BaseSettings):
 
     # Secret key for JWT
     SECRET_KEY: str = "change-this-secret-key"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     LOG_LEVEL: str = "INFO"
+    DB_ECHO_LOG: bool = False
 
     # Redis URL (for Celery stats)
-    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
+    REDIS_URL: RedisDsn = "redis://localhost:6379/0"
 
     # Elasticsearch URL for monitoring
     # ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200" # Not used in Request Network
+    
+    # Celery Configuration
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    
+    # Import/Export directories
+    IMPORT_DIR: str = "imports"
+    EXPORT_DIR: str = "exports"
     
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3001"]

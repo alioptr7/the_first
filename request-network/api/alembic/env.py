@@ -33,10 +33,14 @@ target_metadata = Base.metadata
 # Import all models here so that Alembic's autogenerate can see them.
 from models.user import User
 from models.request import Request
-from models.response import Response
 from models.batch import ExportBatch, ImportBatch # noqa
-from models.audit_log import AuditLog
 from models.api_key import ApiKey
+
+# Try to import AuditLog if it exists
+try:
+    from models.audit_log import AuditLog  # noqa
+except ImportError:
+    pass
 
 def get_database_url():
     """Construct the database URL from environment variables."""

@@ -7,7 +7,7 @@ from celery import shared_task
 from sqlalchemy import select
 
 from core.config import settings
-from core.dependencies import get_db
+from db.session import get_db_session as get_db
 from models.settings import Settings
 from models.user import User
 from schemas.settings import SettingsImport

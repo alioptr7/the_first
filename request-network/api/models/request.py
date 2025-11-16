@@ -13,6 +13,7 @@ class Request(BaseModel):
     """
     __tablename__ = "requests"
     
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     query_type: Mapped[str] = mapped_column(String(50), nullable=False)

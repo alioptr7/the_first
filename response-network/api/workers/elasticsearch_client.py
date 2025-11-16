@@ -8,11 +8,36 @@ from core.config import settings
 class ElasticsearchClient:
     def __init__(self, hosts=None):
         if hosts is None:
-            hosts = [settings.ELASTICSEARCH_HOST]
-        self.es = AsyncElasticsearch(hosts=hosts)
+            # Use ELASTICSEARCH_URL from settings
+            # Parse the URL to get hosts
+            es_url = str(settings.ELASTICSEARCH_URL)
+            hosts = [es_url]
+        
+        try:
+            self.es = AsyncElasticsearch(hosts=hosts)
+        except Exception as e:
+            logging.error(f"Failed to initialize Elasticsearch client: {e}")
+            self.es = None
 
     async def close(self):
-        await self.es.close()
+        if self.es:
+            await self.es.close()
+    
+    async def close_connection(self):
+        """Alias for close() for compatibility."""
+        await self.close()
+    
+    async def check_health(self):
+        """Check if Elasticsearch is healthy."""
+        if not self.es:
+            return False
+        
+        try:
+            response = await self.es.cluster.health()
+            return response.get("status") in ["yellow", "green"]
+        except Exception as e:
+            logging.error(f"Elasticsearch health check failed: {e}")
+            return False
 
     async def search(self, index, query, size=10):
         """Execute a search query on Elasticsearch."""

@@ -4,10 +4,12 @@ from sqlalchemy import select, func
 from typing import List, Optional
 from datetime import datetime, timedelta
 import logging
+import redis.asyncio as redis
 
 from models.schemas import SystemStats, SystemHealth, LogEntry
 from models.request import Request
 from workers.elasticsearch_client import ElasticsearchClient
+from core.config import settings
 
 async def get_system_stats(db: AsyncSession) -> SystemStats:
     """Get current system resource usage and performance metrics."""
@@ -57,41 +59,11 @@ async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemH
     # Check PostgreSQL
     try:
         # Basic connectivity check
-        await db.execute(select(1))
+        result = await db.execute(select(1))
+        result.scalar()
         
-        # Get PostgreSQL version and some basic stats
-        result = await db.execute("""
-            SELECT version(),
-                   pg_database_size(current_database()) as db_size,
-                   (SELECT count(*) FROM pg_stat_activity) as connections,
-                   pg_is_in_recovery() as is_replica
-        """)
-        pg_stats = await result.fetchone()
-        
-        db_status = {
-            "version": pg_stats[0].split()[0],
-            "db_size_mb": round(pg_stats[1] / (1024 * 1024), 2),
-            "active_connections": pg_stats[2],
-            "is_replica": pg_stats[3]
-        }
-        
-        # Check if we're approaching connection limit
-        result = await db.execute("""
-            SELECT setting::int as max_connections
-            FROM pg_settings
-            WHERE name = 'max_connections'
-        """)
-        max_connections = (await result.fetchone())[0]
-        connection_ratio = pg_stats[2] / max_connections
-        
-        if connection_ratio > 0.8:  # More than 80% connections used
-            components["database"] = "degraded"
-            db_status["warning"] = f"High connection usage: {pg_stats[2]}/{max_connections}"
-        else:
-            components["database"] = "healthy"
-            
-        # Add stats to the components details
-        components["database_stats"] = db_status
+        components["database"] = "healthy"
+        components["database_stats"] = {"status": "healthy"}
         
     except Exception as e:
         components["database"] = "down"
@@ -109,6 +81,19 @@ async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemH
     except Exception as e:
         components["elasticsearch"] = "down"
         logging.error(f"Elasticsearch health check failed: {str(e)}")
+        components["elasticsearch_error"] = str(e)
+    
+    # Check Redis
+    try:
+        # Redis connection string سے براہ راست بنائیں
+        redis_client = await redis.from_url("redis://localhost:6380/0")
+        await redis_client.ping()
+        components["redis"] = "healthy"
+        await redis_client.close()
+    except Exception as e:
+        components["redis"] = "down"
+        logging.error(f"Redis health check failed: {str(e)}")
+        components["redis_error"] = str(e)
     
     # If not detailed, remove sensitive information
     if not detailed:

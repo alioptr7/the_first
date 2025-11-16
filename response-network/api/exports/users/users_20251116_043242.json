@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "id": "b53a23d0-4821-43d2-8d96-6220bbb0224f",
+      "username": "admin",
+      "email": "admin@example.com",
+      "hashed_password": "$2b$12$6csggHE0gdcsXWyTQ6Foue7Yb/VmYTUajmKA2/QH3uAplePp.X1IK",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2025-11-11T06:17:03.747447+00:00",
+      "updated_at": "2025-11-11T06:17:03.747447+00:00"
+    }
+  ],
+  "exported_at": "2025-11-16T04:32:42.321785",
+  "version": 1,
+  "total_count": 1
+}

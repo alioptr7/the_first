@@ -13,14 +13,15 @@ from schemas.admin import SystemStats
 
 router = APIRouter(
     prefix="/admin",
-    tags=["Admin"],
-    dependencies=[Depends(require_admin)] # این خط تمام اندپوینت‌های این روتر را محافظت می‌کند
+    tags=["Admin"]
+    # Remove global dependencies - add them per endpoint instead
 )
 
 
 @router.get("/stats", response_model=SystemStats)
 async def get_system_stats(
-    db: Annotated[AsyncSession, Depends(get_db_session)]
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    _: Annotated[None, Depends(require_admin)] = None  # Add auth check here
 ):
     """
     Retrieves overall statistics for the system.

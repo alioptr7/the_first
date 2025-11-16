@@ -1,12 +1,20 @@
 from datetime import timedelta
 from typing import Annotated
+import sys
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from auth import security
+# Ensure we're using local Request Network auth module
+_api_dir = Path(__file__).parent.parent
+if str(_api_dir) not in sys.path:
+    sys.path.insert(0, str(_api_dir))
+
+# Import directly from Request Network auth
+from auth.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from auth.schemas import Token
 from db.session import get_db_session
 from models.user import User
@@ -36,8 +44,8 @@ async def login_for_access_token(
         )
 
     # 3. Create the access token
-    access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = security.create_access_token(
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
         data={
             "sub": user.username,
             "user_id": str(user.id),

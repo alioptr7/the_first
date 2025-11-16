@@ -39,6 +39,27 @@ services:
     networks:
       - response_network
 
+  # Elasticsearch (Search Engine)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: response_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - response_network
+
   # FastAPI Application
   api:
     build:
@@ -50,6 +71,7 @@ services:
       REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       API_V1_STR: /api/v1
       PROJECT_NAME: Response Network
     ports:
@@ -58,6 +80,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     volumes:
       - ./response-network/api/exports:/app/response-network/api/exports
@@ -80,12 +104,15 @@ services:
       REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       API_V1_STR: /api/v1
       PROJECT_NAME: Response Network
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
       api:
         condition: service_started
@@ -105,12 +132,15 @@ services:
       REDIS_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6380}/0
       CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6380}/1
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       API_V1_STR: /api/v1
       PROJECT_NAME: Response Network
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
       api:
         condition: service_started
@@ -120,6 +150,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  elasticsearch_data:
 
 networks:
   response_network:

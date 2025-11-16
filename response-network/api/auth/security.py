@@ -1,19 +1,39 @@
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Annotated
+
+# Add Response Network API directory to sys.path ONLY if needed
+_response_api_dir = Path(__file__).resolve().parent.parent
+if str(_response_api_dir) not in sys.path:
+    sys.path.insert(0, str(_response_api_dir))
 
 from fastapi import Depends, HTTPException, status, Cookie, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-
-security = HTTPBearer()
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.token import TokenData
-from core.hashing import get_password_hash, verify_password
+# Use absolute imports relative to Response Network API
+import importlib.util
+_token_path = _response_api_dir / "schemas" / "token.py"
+_spec = importlib.util.spec_from_file_location("token", _token_path)
+_token_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_token_module)
+TokenData = _token_module.TokenData
+
+_hashing_path = _response_api_dir / "core" / "hashing.py"
+_spec = importlib.util.spec_from_file_location("hashing", _hashing_path)
+_hashing_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_hashing_module)
+get_password_hash = _hashing_module.get_password_hash
+verify_password = _hashing_module.verify_password
+
 from db.session import get_db_session
 from models.user import User
 from core.config import settings
+
+security = HTTPBearer()
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
@@ -79,34 +99,5 @@ async def get_current_user(
 
     if not user:
         raise credentials_exception
-
-    return user
-    """
-    Decodes the JWT token from the cookie and returns the corresponding user.
-    """
-    if not access_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
-        )
-
-    # Check if token starts with "bearer "
-    if access_token.lower().startswith("bearer "):
-        token = access_token.split(" ", 1)[1]
-    else:
-        token = access_token  # Use the whole token if no bearer prefix
-
-    token_data = decode_access_token(token)
-    if not token_data or not token_data.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
-
-    # Use select query to be more explicit about the search
-    query = select(User).where(User.id == token_data.user_id)
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-    
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
 
     return user

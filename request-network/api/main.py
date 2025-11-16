@@ -7,9 +7,15 @@ from sqlalchemy import text
 
 # --- Start of Path Fix ---
 # Add project root to the Python path to allow imports from `shared`
+api_dir = Path(__file__).resolve().parent
 project_root = Path(__file__).resolve().parents[2]
+
+# Insert api_dir FIRST so local modules take precedence
+if str(api_dir) not in sys.path:
+    sys.path.insert(0, str(api_dir))
+    
 if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))  # Use append instead of insert to prioritize local imports
+    sys.path.insert(1, str(project_root))
 # --- End of Path Fix ---
 
 from core.config import settings
