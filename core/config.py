@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     DB_ECHO_LOG: bool = False
 
     model_config = SettingsConfigDict(
-        case_sensitive=True, env_file=".env", env_file_encoding="utf-8"
+        case_sensitive=True, env_file=".env", env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 

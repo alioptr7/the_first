@@ -1,21 +1,24 @@
 import logging
 import shutil
+import os
 from pathlib import Path
 
 from pydantic import ValidationError
 
 from api.models.batch import ImportBatch
-from api.models.request import IncomingRequest
+from api.models.incoming_request import IncomingRequest
 from shared.file_format_handler import JSONLHandler, calculate_checksum
 from shared.schemas.transfer import RequestTransferSchema
 from workers.celery_app import celery_app
 from workers.database import db_session_scope
+from workers.config import settings
 from .query_executor import execute_query_task
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-IMPORT_DIR = Path("./import/requests")
+# Use settings from config to resolve import directory
+IMPORT_DIR = Path(settings.IMPORT_DIR) / "requests" if hasattr(settings, 'IMPORT_DIR') else Path("./import/requests")
 ARCHIVE_DIR = IMPORT_DIR / "archive"
 FAILED_DIR = IMPORT_DIR / "failed"
 
@@ -71,27 +74,43 @@ def import_request_files():
                     record_count=len(validated_requests),
                     file_size_bytes=file_path.stat().st_size,
                     checksum=checksum,
-                    status="completed", # Marked as completed since we process immediately
+                    status="processing",  # Changed from 'completed' to 'processing'
                 )
                 db.add(import_batch)
-                db.flush()
+                db.flush()  # Flush to get the ID
+                db.commit()  # Commit to ensure ID is available
 
                 # 4. Create IncomingRequest for each record and dispatch task
                 for req_data in validated_requests:
-                    new_request = IncomingRequest(
-                        id=req_data.id, # Use the original ID
-                        original_request_id=req_data.id,
-                        user_id=req_data.user_id,
-                        query_type=req_data.query_type,
-                        query_params=req_data.query_params,
-                        priority=req_data.priority,
-                        import_batch_id=import_batch.id,
-                        status="pending",
-                    )
-                    db.add(new_request)
-                    # Dispatch the executor task
-                    execute_query_task.apply_async(args=[str(new_request.id)], priority=new_request.priority)
+                    try:
+                        new_request = IncomingRequest(
+                            id=req_data.id,  # Use the original ID
+                            original_request_id=req_data.id,
+                            user_id=req_data.user_id,
+                            query_type=req_data.query_type,
+                            query_params=req_data.query_params,
+                            priority=req_data.priority,
+                            import_batch_id=import_batch.id,
+                            status="pending",
+                        )
+                        db.add(new_request)
+                        db.flush()  # Flush each request individually
+                        
+                        # Dispatch the executor task (sync call, no await needed)
+                        logger.info(f"Dispatching query execution for request {new_request.id}")
+                        execute_query_task.apply_async(
+                            args=[str(new_request.id)],
+                            priority=new_request.priority,
+                            queue='default'
+                        )
+                    except Exception as req_error:
+                        logger.error(f"Failed to process individual request: {req_error}", exc_info=True)
+                        continue
 
+                # Commit all requests
+                db.commit()
+                import_batch.status = "completed"
+                db.commit()
                 logger.info(f"Dispatched {len(validated_requests)} requests from batch {import_batch.id}.")
 
             # 5. Archive file after successful transaction
@@ -99,6 +118,9 @@ def import_request_files():
             processed_files += 1
         except Exception as e:
             logger.critical(f"Unhandled error processing file {file_path.name}: {e}", exc_info=True)
-            shutil.move(file_path, FAILED_DIR / file_path.name)
+            try:
+                shutil.move(file_path, FAILED_DIR / file_path.name)
+            except Exception as move_error:
+                logger.error(f"Failed to move file to failed directory: {move_error}")
 
-    return f"Imported and dispatched {processed_files} files."
+    logger.info(f"import_request_files task completed. Processed {processed_files} files.")

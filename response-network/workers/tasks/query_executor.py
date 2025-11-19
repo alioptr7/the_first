@@ -4,8 +4,8 @@ import logging
 import time
 from datetime import datetime
 
-from api.models.request import IncomingRequest
-from api.models.result import QueryResult
+from api.models.incoming_request import IncomingRequest
+from api.models.query_result import QueryResult
 from workers.celery_app import celery_app
 from workers.database import db_session_scope
 from workers.elasticsearch_client import ElasticsearchClient
@@ -31,9 +31,10 @@ def generate_cache_key(index: str, query_body: dict, size: int, offset: int) -> 
     retry_kwargs={"max_retries": 3, "countdown": 60},
     acks_late=True,
 )
-async def execute_query_task(self, incoming_request_id: str):
+def execute_query_task(self, incoming_request_id: str):
     """
     Executes a single query against Elasticsearch, with caching.
+    Note: Changed from async to sync since Celery tasks work better with sync functions
     """
     logger.info(f"Starting query execution for request_id: {incoming_request_id}")
     es_client = ElasticsearchClient()
@@ -73,16 +74,20 @@ async def execute_query_task(self, incoming_request_id: str):
                 cache_hit = True
             else:
                 logger.info(f"Cache miss for request {incoming_request_id}. Executing ES query.")
-                es_response = await es_client.execute_query(
-                    query_type=request.query_type,
-                    query_params=request.query_params,
-                    size=size,
-                    offset=offset,
-                )
-                result_data = es_response
-                es_took_ms = es_response.get("took")
-                # Cache the result
-                redis_client.set(cache_key, json.dumps(result_data), ex=settings.CACHE_MAINTENANCE_SCHEDULE_SECONDS)
+                try:
+                    es_response = es_client.execute_query(
+                        query_type=request.query_type,
+                        query_params=request.query_params,
+                        size=size,
+                        offset=offset,
+                    )
+                    result_data = es_response
+                    es_took_ms = es_response.get("took")
+                    # Cache the result
+                    redis_client.set(cache_key, json.dumps(result_data), ex=settings.CACHE_MAINTENANCE_SCHEDULE_SECONDS)
+                except Exception as es_error:
+                    logger.error(f"Elasticsearch query execution failed: {es_error}", exc_info=True)
+                    raise
 
             # Store result in the database
             new_result = QueryResult(
@@ -95,10 +100,12 @@ async def execute_query_task(self, incoming_request_id: str):
                 cache_hit=cache_hit,
             )
             db.add(new_result)
+            db.commit()
 
             # Finalize request status
             request.status = "completed"
             request.completed_at = datetime.utcnow()
+            db.commit()
             logger.info(f"Successfully completed query for request {incoming_request_id}.")
 
     except Exception as e:
@@ -108,7 +115,11 @@ async def execute_query_task(self, incoming_request_id: str):
             if request:
                 request.status = "failed"
                 request.error_message = str(e)
+                db.commit()
         # Re-raise the exception to trigger Celery's retry mechanism
         raise
     finally:
-        await es_client.close_connection()
+        try:
+            es_client.close_connection()
+        except Exception as close_error:
+            logger.warning(f"Error closing Elasticsearch connection: {close_error}")

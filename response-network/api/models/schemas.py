@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, conint
+from pydantic import BaseModel, conint
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 

@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict
 
-from elasticsearch import AsyncElasticsearch, ConnectionError, NotFoundError, TransportError
+from elasticsearch import Elasticsearch, ConnectionError, NotFoundError, TransportError
 
 from .config import settings
 
@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 class ElasticsearchClient:
     """
-    An asynchronous client to interact with Elasticsearch, tailored for the Response Network.
+    A synchronous client to interact with Elasticsearch, tailored for the Response Network.
     It handles connection, query building, validation, and execution.
     """
 
     def __init__(self, es_url: str = str(settings.ELASTICSEARCH_URL)):
         logger.info(f"Initializing Elasticsearch client for URL: {es_url}")
-        self.client = AsyncElasticsearch(
+        self.client = Elasticsearch(
             hosts=[es_url],
             # TODO: Add authentication in production
             # http_auth=(settings.ELASTICSEARCH_USER, settings.ELASTICSEARCH_PASSWORD),
@@ -25,15 +25,15 @@ class ElasticsearchClient:
             request_timeout=settings.ELASTICSEARCH_QUERY_TIMEOUT,
         )
 
-    async def close_connection(self):
+    def close_connection(self):
         """Closes the Elasticsearch client connection."""
         logger.info("Closing Elasticsearch client connection.")
-        await self.client.close()
+        self.client.close()
 
-    async def check_health(self) -> bool:
+    def check_health(self) -> bool:
         """Checks the health of the Elasticsearch cluster."""
         try:
-            is_healthy = await self.client.ping()
+            is_healthy = self.client.ping()
             if is_healthy:
                 logger.info("Elasticsearch cluster is healthy.")
             else:

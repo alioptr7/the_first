@@ -1,0 +1,37 @@
+{
+  "users": [
+    {
+      "id": "b53a23d0-4821-43d2-8d96-6220bbb0224f",
+      "username": "admin",
+      "email": "admin@example.com",
+      "hashed_password": "$2b$12$/bmG2Y09Q6hm/pG/wfH.h.FtUXjS2uzGSKy8NmKX8931ZnnLRe9G.",
+      "role": "admin",
+      "is_active": true,
+      "created_at": "2025-11-11T06:17:03.747447+00:00",
+      "updated_at": "2025-11-11T06:17:03.747447+00:00"
+    },
+    {
+      "id": "5f96186a-cd2f-4621-84c2-396b5e6d13c5",
+      "username": "testuser1",
+      "email": "testuser1@example.com",
+      "hashed_password": "$2b$12$dL8Ivh9rqJ9tLV52igW0Ju5V58/kakJWhv.Ra45ozpf9h2XtNZQHu",
+      "role": "user",
+      "is_active": true,
+      "created_at": "2025-11-16T08:29:20.383402+00:00",
+      "updated_at": "2025-11-16T08:29:20.383402+00:00"
+    },
+    {
+      "id": "e9ab232a-34f6-431f-bc86-f2dde80a9de7",
+      "username": "e2e_user1",
+      "email": "e2e_user1@example.com",
+      "hashed_password": "$2b$12$GvwbIWF3AWaJuTnnDfHILeoVZU8NWqn3miCyjF6J6K5sutdbu9OvS",
+      "role": "user",
+      "is_active": true,
+      "created_at": "2025-11-16T08:31:28.366032+00:00",
+      "updated_at": "2025-11-16T08:31:28.366032+00:00"
+    }
+  ],
+  "exported_at": "2025-11-16T09:07:17.829871",
+  "version": 1,
+  "total_count": 3
+}

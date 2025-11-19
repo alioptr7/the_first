@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres-request:
+    image: postgres:18-alpine
+    container_name: postgres-request-network
+    environment:
+      POSTGRES_USER: requests_user
+      POSTGRES_PASSWORD: requests_pass
+      POSTGRES_DB: requests_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_request_data:/var/lib/postgresql/data
+
+  redis-request:
+    image: redis:7-alpine
+    container_name: redis-request-network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_request_data:/data
+
+volumes:
+  postgres_request_data:
+  redis_request_data:

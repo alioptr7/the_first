@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     CACHE_MAINTENANCE_SCHEDULE_SECONDS: int = 3600  # 1 hour
     SYSTEM_MONITORING_SCHEDULE_SECONDS: int = 300  # 5 minutes
     
-    # Export directories
+    # Import/Export directories
+    IMPORT_DIR: str = "/app/import"
     EXPORT_DIR: str = "/app/exports"
     SETTINGS_EXPORT_SCHEDULE_SECONDS: int = 60  # 1 minute
 

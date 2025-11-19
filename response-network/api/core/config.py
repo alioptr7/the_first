@@ -54,7 +54,8 @@ class Settings(BaseSettings):
     # Elasticsearch URL for monitoring
     ELASTICSEARCH_URL: AnyHttpUrl = "http://localhost:9200"
     
-    # Export directory for settings
+    # Import/export directories for file exchange with request network
+    IMPORT_DIR: str = "import"
     EXPORT_DIR: str = "exports"
     
     # CORS

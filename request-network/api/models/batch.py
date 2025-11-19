@@ -5,7 +5,7 @@ from sqlalchemy import String, Integer, DateTime, BigInteger, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, declared_attr
 
-from shared.database.base import BaseModel
+from shared.database.base import BaseModel, UUIDMixin
 
 class BaseBatch(BaseModel):
     __abstract__ = True
@@ -21,7 +21,7 @@ class BaseBatch(BaseModel):
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
-class ExportBatch(BaseBatch):
+class ExportBatch(UUIDMixin, BaseBatch):
     """
     Represents a batch of records exported to a file.
     """
@@ -29,7 +29,7 @@ class ExportBatch(BaseBatch):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class ImportBatch(BaseBatch):
+class ImportBatch(UUIDMixin, BaseBatch):
     """
     Represents a batch of records imported from a file.
     """

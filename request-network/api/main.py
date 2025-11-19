@@ -54,22 +54,22 @@ if settings.BACKEND_CORS_ORIGINS:
 # Include API routers
 app.include_router(auth_router.router, prefix=settings.API_V1_STR)
 app.include_router(request_router.router, prefix=settings.API_V1_STR)
-app.include_router(admin_router.router)
+app.include_router(admin_router.router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")
 async def startup_event():
     log.info("Application startup...", api_version=app.version)
 
-@app.get("/")
+@app.get(f"{settings.API_V1_STR}/", tags=["Root"])
 async def root():
     return {"message": "Welcome to the Request Network API"}
 
-@app.get("/health", tags=["Monitoring"])
+@app.get(f"{settings.API_V1_STR}/health", tags=["Monitoring"])
 async def health_check():
     return {"status": "ok"}
 
-@app.get("/health/ready", tags=["Monitoring"])
+@app.get(f"{settings.API_V1_STR}/health/ready", tags=["Monitoring"])
 async def readiness_check(db: AsyncSession = Depends(get_db_session)):
     """
     Checks if the service is ready to accept traffic (e.g., DB is connected).

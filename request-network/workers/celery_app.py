@@ -10,7 +10,7 @@ celery_app = Celery(
         "workers.tasks.export_requests",
         "workers.tasks.import_results",
         "workers.tasks.settings_importer",
-        "workers.tasks.cleanup",
+        "workers.tasks.users_importer",
     ],
 )
 

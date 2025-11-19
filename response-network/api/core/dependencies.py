@@ -2,6 +2,9 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from db.session import async_session, SessionLocal
+from .config import settings
+
+from redis.asyncio import Redis
 
 async def get_db() -> AsyncSession:
     """Get async database session."""
@@ -36,3 +39,13 @@ async def get_current_superuser(token: str = None):
             detail="Not authenticated"
         )
     return None
+
+async def get_redis() -> Redis:
+    """Get async Redis client for Celery tasks."""
+    redis_url = str(settings.REDIS_URL)
+    redis = await Redis.from_url(redis_url, decode_responses=True)
+    try:
+        yield redis
+    finally:
+        await redis.close()
+

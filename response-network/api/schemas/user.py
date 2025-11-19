@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 import uuid
 
 
 class UserBase(BaseModel):
     """Shared properties for a user."""
-    email: EmailStr
+    email: str
     username: str
     full_name: Optional[str] = None  # Using Optional explicitly
     daily_request_limit: int = 100
@@ -39,7 +39,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """Properties that can be updated."""
-    email: EmailStr | None = None
+    email: str | None = None
     full_name: str | None = None
     username: str | None = None
     password: str | None = None

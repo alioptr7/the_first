@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from api.models.batch import ExportBatch
-from api.models.result import QueryResult
+from api.models.query_result import QueryResult
 from shared.file_format_handler import JSONLHandler, generate_filename, calculate_checksum
 from shared.schemas.transfer import ResponseTransferSchema
 from workers.celery_app import celery_app

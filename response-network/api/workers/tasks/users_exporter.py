@@ -15,6 +15,7 @@ from core.dependencies import get_db_sync
 from models.user import User as UserModel
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "users"
+META_FILE = EXPORT_PATH / "last_export_meta.json"
 
 # Redis client for deduplication
 redis_client = redis.from_url(settings.CELERY_BROKER_URL)
@@ -30,61 +31,80 @@ def export_users_to_request_network(self):
     try:
         # Create export directory if it doesn't exist
         EXPORT_PATH.mkdir(parents=True, exist_ok=True)
-        
+
+        # Determine last export timestamp (if available)
+        last_export_at = None
+        if META_FILE.exists():
+            try:
+                with open(META_FILE, "r", encoding="utf-8") as mf:
+                    meta = json.load(mf)
+                    last_export_at = meta.get("exported_at")
+                    if last_export_at:
+                        last_export_at = datetime.fromisoformat(last_export_at)
+            except Exception:
+                last_export_at = None
+
         # Get current timestamp for filename
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        
+
         # Get synchronous session
         db = next(get_db_sync())
-        
+
         try:
-            # Get all users
-            all_users = db.query(UserModel).all()
-            
-            # Prepare export data
+            # Query users changed since last export (or all if no last_export_at)
+            if last_export_at:
+                changed_users = db.query(UserModel).filter(
+                    (UserModel.updated_at != None) & (
+                        (UserModel.updated_at > last_export_at) | (UserModel.created_at > last_export_at)
+                    )
+                ).all()
+            else:
+                changed_users = db.query(UserModel).all()
+
+            # If nothing changed, return quickly
+            if not changed_users:
+                return {"status": "no_changes", "exported_at": datetime.utcnow().isoformat(), "total_users": 0}
+
+            # Prepare export data (use stored hashed_password)
             users_list = []
-            for user in all_users:
-                # Generate default password hash (using username as default password)
-                # In production, this should be handled differently (one-time password, email, etc.)
-                default_password = user.username  # For testing: password = username
-                hashed_password = bcrypt.hashpw(
-                    default_password.encode('utf-8'),
-                    bcrypt.gensalt()
-                ).decode('utf-8')
-                
+            for user in changed_users:
                 users_list.append({
                     "id": str(user.id),
                     "username": user.username,
                     "email": user.email,
-                    "hashed_password": hashed_password,
-                    "role": "admin" if user.is_admin else "user",  # Convert is_admin to role
+                    "hashed_password": user.hashed_password,
+                    "role": user.profile_type or ("admin" if getattr(user, "is_admin", False) else "user"),
                     "is_active": user.is_active,
-                    "created_at": user.created_at.isoformat() if user.created_at else None,
-                    "updated_at": user.updated_at.isoformat() if user.updated_at else None
+                    "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+                    "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None
                 })
-            
+
             export_data = {
                 "users": users_list,
                 "exported_at": datetime.utcnow().isoformat(),
                 "version": 1,
                 "total_count": len(users_list)
             }
-            
+
             # Write to file
             export_file = EXPORT_PATH / f"users_{timestamp}.json"
             with open(export_file, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
-            
+
             # Write latest.json for easy access
             latest_file = EXPORT_PATH / "latest.json"
             with open(latest_file, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
-            
+
+            # Update meta file with last export time
+            with open(META_FILE, "w", encoding="utf-8") as mf:
+                json.dump({"exported_at": export_data["exported_at"]}, mf)
+
             return {
                 "status": "success",
                 "export_file": str(export_file),
                 "total_users": len(users_list),
-                "exported_at": datetime.utcnow().isoformat()
+                "exported_at": export_data["exported_at"],
             }
         finally:
             db.close()
