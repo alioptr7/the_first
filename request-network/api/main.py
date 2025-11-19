@@ -8,7 +8,7 @@ from sqlalchemy import text
 # --- Start of Path Fix ---
 # Add project root to the Python path to allow imports from `shared`
 api_dir = Path(__file__).resolve().parent
-project_root = Path(__file__).resolve().parents[2]
+project_root = api_dir.parent
 
 # Insert api_dir FIRST so local modules take precedence
 if str(api_dir) not in sys.path:
@@ -20,6 +20,7 @@ if str(project_root) not in sys.path:
 
 from core.config import settings
 from core.middleware import RequestContextMiddleware
+from core.rate_limiter import RateLimiter
 from core.exceptions import global_exception_handler
 from db.session import get_db_session
 from routers import auth_router, request_router, admin_router # admin_router قبلا برای user management بود، حالا برای ادمین اصلی است
