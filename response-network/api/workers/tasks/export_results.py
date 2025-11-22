@@ -7,7 +7,7 @@ from celery import shared_task
 from sqlalchemy import select
 
 from core.config import settings
-from core.dependencies import get_db
+from db.session import async_session
 from models.request import Request
 from schemas.request import RequestExport
 
@@ -19,7 +19,7 @@ def export_completed_results():
     async def _export():
         EXPORT_PATH.mkdir(parents=True, exist_ok=True)
         
-        async with get_db() as db:
+        async with async_session() as db:
             # Get completed requests that haven't been exported
             result = await db.execute(
                 select(Request)

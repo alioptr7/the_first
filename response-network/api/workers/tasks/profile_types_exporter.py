@@ -4,7 +4,6 @@ ProfileTypes export task - Export profile types and permissions to request-netwo
 from datetime import datetime
 import json
 from pathlib import Path
-import redis
 
 from celery import shared_task
 from sqlalchemy.orm import Session
@@ -14,9 +13,6 @@ from core.dependencies import get_db_sync
 from models.profile_type_config import ProfileTypeConfig
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "profile_types"
-
-# Redis client for deduplication
-redis_client = redis.from_url(settings.CELERY_BROKER_URL)
 
 
 @shared_task(bind=True, max_retries=3)

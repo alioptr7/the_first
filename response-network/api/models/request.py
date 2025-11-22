@@ -18,6 +18,7 @@ class Request(Base):
     progress = Column(Float, server_default='0.0', nullable=False)  # Progress percentage (0-100)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    exported_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="requests")

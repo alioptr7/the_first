@@ -4,7 +4,6 @@ Users export task - Export users to request-network
 from datetime import datetime
 import json
 from pathlib import Path
-import redis
 import bcrypt
 
 from celery import shared_task
@@ -16,9 +15,6 @@ from models.user import User as UserModel
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "users"
 META_FILE = EXPORT_PATH / "last_export_meta.json"
-
-# Redis client for deduplication
-redis_client = redis.from_url(settings.CELERY_BROKER_URL)
 
 
 @shared_task(bind=True, max_retries=3)

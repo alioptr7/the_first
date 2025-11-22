@@ -4,7 +4,6 @@ Password sync task - Sync password changes to Request Network
 from datetime import datetime
 import json
 from pathlib import Path
-import redis
 
 from celery import shared_task
 from sqlalchemy.orm import Session
@@ -14,9 +13,6 @@ from core.dependencies import get_db_sync
 from models.user import User as UserModel
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "password_changes"
-
-# Redis client for deduplication
-redis_client = redis.from_url(settings.CELERY_BROKER_URL)
 
 
 @shared_task(bind=True, max_retries=3)

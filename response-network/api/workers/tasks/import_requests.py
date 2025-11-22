@@ -59,3 +59,12 @@ def import_requests_from_request_network():
         return f"Processed {len(imported_files)} files: {', '.join(imported_files)}"
     
     return asyncio.run(_import())
+
+
+# Backwards-compatible task name expected by Celery beat/scheduler
+# Register the older name so incoming messages/tasks addressed to
+# `api.workers.tasks.import_requests.import_request_files` are handled.
+@shared_task(name="api.workers.tasks.import_requests.import_request_files")
+def import_request_files():
+    """Compatibility wrapper that calls the new import task."""
+    return import_requests_from_request_network()

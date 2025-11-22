@@ -28,7 +28,7 @@ ARCHIVE_DIR.mkdir(exist_ok=True)
 FAILED_DIR.mkdir(exist_ok=True)
 
 
-@celery_app.task(name="workers.tasks.import_requests.import_request_files")
+@celery_app.task(name="api.workers.tasks.import_requests.import_request_files")
 def import_request_files():
     """
     Scans the import directory for request files, processes them,

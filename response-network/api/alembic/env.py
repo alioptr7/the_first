@@ -24,6 +24,7 @@ from models.request_type import RequestType
 from models.request_type_parameter import RequestTypeParameter
 from models.request_access import UserRequestAccess
 from models.profile_type_config import ProfileTypeConfig
+from models.request import Request
 
 # Load our config
 config = context.config
@@ -35,10 +36,16 @@ if config.config_file_name is not None:
 # Set SQLAlchemy metadata
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+
+def get_database_url():
+    """Build database URL from environment variables."""
+    user = os.getenv("REQUEST_DB_USER", "responses_user")
+    password = os.getenv("REQUEST_DB_PASSWORD", "responses_pass")
+    host = os.getenv("REQUEST_DB_HOST", "localhost")
+    port = os.getenv("REQUEST_DB_PORT", "5432")
+    db_name = os.getenv("REQUEST_DB_NAME", "responses_db")
+    # Use psycopg2 (sync) for Alembic migrations
+    return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
 
 
 def run_migrations_offline() -> None:
@@ -53,7 +60,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -72,8 +79,9 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Create engine directly from database URL
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        {"sqlalchemy.url": get_database_url()},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

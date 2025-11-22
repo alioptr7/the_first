@@ -107,3 +107,43 @@ def check_system_health():
             return "System health check passed"
     
     return asyncio.run(_check())
+
+
+# Alias for backward compatibility with beat schedule
+# Note: Direct call to check_system_health() would cause nested asyncio.run()
+# So we reimplement the async logic directly
+@shared_task(name="api.workers.tasks.system_monitoring.system_health_check")
+def system_health_check():
+    """System health check matching beat schedule name."""
+    async def _check():
+        async with get_db() as db:
+            # Get latest system metrics
+            result = await db.execute(
+                select(SystemMetrics)
+                .order_by(SystemMetrics.created_at.desc())
+                .limit(1)
+            )
+            latest = result.scalar_one_or_none()
+            
+            alerts = []
+            
+            if not latest:
+                return "No system metrics available yet"
+            
+            # Check thresholds
+            if latest.cpu_percent > settings.ALERT_CPU_THRESHOLD:
+                alerts.append(f"High CPU usage: {latest.cpu_percent}%")
+            if latest.memory_percent > settings.ALERT_MEMORY_THRESHOLD:
+                alerts.append(f"High memory usage: {latest.memory_percent}%")
+            if latest.disk_percent > settings.ALERT_DISK_THRESHOLD:
+                alerts.append(f"High disk usage: {latest.disk_percent}%")
+            if latest.avg_processing_time and latest.avg_processing_time > settings.ALERT_PROCESSING_TIME_THRESHOLD:
+                alerts.append(f"Slow request processing: {latest.avg_processing_time:.2f}s average")
+            
+            if alerts:
+                # TODO: Send alerts via configured channels (email, Slack, etc.)
+                return f"Health check alerts: {'; '.join(alerts)}"
+            
+            return "System health check passed"
+    
+    return asyncio.run(_check())
