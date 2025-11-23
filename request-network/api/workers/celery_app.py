@@ -18,9 +18,28 @@ celery_app.conf.update(
     enable_utc=True,
     beat_scheduler="celery.beat:PersistentScheduler",
     beat_schedule={
+        # EXPORTERS (to Response Network)
+        # Export pending requests every 120 seconds (2 minutes)
+        "export-pending-requests-every-120s": {
+            "task": "workers.tasks.export_requests.export_pending_requests",
+            "schedule": 120.0,
+        },
+        
+        # IMPORTERS (from Response Network)
+        # Import settings from response network every 60 seconds
         "import-settings-every-60s": {
             "task": "workers.tasks.settings_importer.import_settings_from_response_network",
-            "schedule": 60.0,  # هر 60 ثانیه
+            "schedule": 60.0,
+        },
+        # Import users from response network every 60 seconds (only if changed)
+        "import-users-every-60s": {
+            "task": "workers.tasks.users_importer.import_users_from_response_network",
+            "schedule": 60.0,
+        },
+        # Import results from response network every 120 seconds
+        "import-results-every-120s": {
+            "task": "workers.tasks.results_importer.import_results_from_response_network",
+            "schedule": 120.0,
         },
     },
 )
@@ -31,5 +50,8 @@ celery_app.autodiscover_tasks(["workers.tasks"], force=True)
 # Import tasks explicitly to ensure they are registered
 try:
     from workers.tasks import settings_importer  # noqa
+    from workers.tasks import export_requests  # noqa
+    from workers.tasks import users_importer  # noqa
+    from workers.tasks import results_importer  # noqa
 except ImportError:
     pass

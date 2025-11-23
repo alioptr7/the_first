@@ -4,20 +4,24 @@ import os
 import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
+# Load environment variables from root .env
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+load_dotenv(os.path.join(project_root, ".env"))
 
 # Add project root to Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, project_root)
 
 from core.hashing import get_password_hash
 from models.user import User
 
-# Database connection settings
-DB_USER = "user"
-DB_PASS = "password"
-DB_HOST = "127.0.0.1"
-DB_PORT = "5433"
-DB_NAME = "response_db"
+# Database connection settings from env
+DB_USER = os.getenv("RESPONSE_DB_USER", "respuser")
+DB_PASS = os.getenv("RESPONSE_DB_PASSWORD", "resppassword123")
+DB_HOST = os.getenv("RESPONSE_DB_HOST", "localhost")
+DB_PORT = os.getenv("RESPONSE_DB_PORT", "5433")
+DB_NAME = os.getenv("RESPONSE_DB_NAME", "response_network_db")
 
 # Create database URL
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

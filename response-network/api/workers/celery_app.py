@@ -28,18 +28,39 @@ celery_app.conf.update(
 # Auto-discover tasks BEFORE setting beat_schedule
 celery_app.autodiscover_tasks(["workers.tasks"], force=True)
 
+# Import all tasks explicitly to ensure they're registered
+from workers.tasks.import_requests import import_requests_from_request_network
+from workers.tasks.export_results import export_completed_results
+from workers.tasks.settings_exporter import export_settings_to_request_network
+from workers.tasks.cache_maintenance import cleanup_old_cache, cleanup_redis_cache
+from workers.tasks.system_monitoring import system_health_check
+
 # Celery Beat schedule for the Response Network
+# NOTE: Users are NOT exported automatically - they are synced manually from Response Network to Request Network
 celery_app.conf.beat_schedule = {
+    # Import requests from request-network every 30 seconds (polling)
+    "import-requests-from-request-network": {
+        "task": "workers.tasks.import_requests.import_requests_from_request_network",
+        "schedule": 30.0,  # هر 30 ثانیه
+    },
+    # Export results to request-network every 120 seconds
+    "export-results-to-request-network": {
+        "task": "workers.tasks.export_results.export_completed_results",
+        "schedule": 120.0,  # هر 120 ثانیه
+    },
+    # Export settings to request-network every 60 seconds
     "export-settings-every-minute": {
         "task": "workers.tasks.settings_exporter.export_settings_to_request_network",
         "schedule": 60.0,  # هر 60 ثانیه
     },
-    "export-users-every-minute": {
-        "task": "workers.tasks.users_exporter.export_users_to_request_network",
-        "schedule": 60.0,  # هر 60 ثانیه
+    # Cache maintenance every 1 hour
+    "cache-maintenance-hourly": {
+        "task": "workers.tasks.cache_maintenance.cleanup_old_cache",
+        "schedule": 3600.0,  # هر 3600 ثانیه (1 ساعت)
     },
-    "export-profile-types-every-minute": {
-        "task": "workers.tasks.profile_types_exporter.export_profile_types_to_request_network",
-        "schedule": 60.0,  # هر 60 ثانیه
-    },
+    # System monitoring every 5 minutes
+    # "system-monitoring-every-5min": {
+    #     "task": "workers.tasks.system_monitoring.system_health_check",
+    #     "schedule": 300.0,  # هر 300 ثانیه (5 دقیقه)
+    # },
 }

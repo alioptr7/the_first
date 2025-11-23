@@ -19,7 +19,7 @@ async_session = sessionmaker(
 # Sync engine for Celery tasks
 sync_database_url = str(settings.DATABASE_URL).replace(
     "postgresql+asyncpg://",
-    "postgresql://"
+    "postgresql+psycopg://"
 )
 sync_engine = create_engine(
     sync_database_url,

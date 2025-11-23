@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import RedisDsn, AnyHttpUrl, PostgresDsn
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -30,12 +31,12 @@ class Settings(BaseSettings):
     SYSTEM_MONITORING_SCHEDULE_SECONDS: int = 300  # 5 minutes
     
     # Import/Export directories
-    IMPORT_DIR: str = "/app/import"
+    IMPORT_DIR: str = "/app/imports"
     EXPORT_DIR: str = "/app/exports"
     SETTINGS_EXPORT_SCHEDULE_SECONDS: int = 60  # 1 minute
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).parent.parent.parent / ".env"),
         env_file_encoding="utf-8",
         extra="ignore"  # Ignore extra fields from .env file
     )

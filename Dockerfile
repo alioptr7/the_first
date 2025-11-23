@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY response-network/api/requirements.txt .
+# Copy unified requirements
+COPY requirements.txt .
 
 # Create virtual environment
 RUN python -m venv /opt/venv

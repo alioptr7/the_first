@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import RedisDsn, PostgresDsn
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     REDIS_URL: RedisDsn = "redis://redis-request:6379/0"
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).parent.parent.parent / ".env"),
         env_file_encoding="utf-8",
         extra="ignore"  # Ignore extra fields from .env file
     )

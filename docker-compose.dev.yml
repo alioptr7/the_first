@@ -47,6 +47,56 @@ services:
       retries: 5
     restart: unless-stopped
 
+  celery-beat-request:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-beat-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    working_dir: /app/request-network
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    command: celery -A workers.celery_app beat -l info
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker-request:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-worker-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    working_dir: /app/request-network
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request:
+        condition: service_healthy
+    restart: unless-stopped
+
   # flower-request:
   #   image: mher/flower
   #   container_name: flower-request
@@ -153,6 +203,114 @@ services:
   #   depends_on:
   #     - redis-response
   #   restart: unless-stopped
+
+  celery-beat-response:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-beat-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=workers"
+    working_dir: /app/response-network/api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/response-network/api
+    command: celery -A workers.celery_app beat -l info
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker-response:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-worker-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=workers"
+    working_dir: /app/response-network/api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/response-network/api
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Request Network API -------------------
+  api-request:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=api"
+    working_dir: /app/request-network/api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      postgres-request:
+        condition: service_healthy
+      redis-request:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Response Network API -------------------
+  api-response:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=api"
+    working_dir: /app/response-network/api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    networks:
+      - app-net
+    depends_on:
+      postgres-response:
+        condition: service_healthy
+      redis-response:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-request-data: {}
