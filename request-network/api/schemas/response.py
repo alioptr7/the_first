@@ -17,3 +17,13 @@ class ResponsePublic(BaseModel):
     execution_time_ms: int | None = None
     received_at: datetime
     is_cached: bool
+
+
+class ResponseDetailed(ResponsePublic):
+    """
+    Schema for displaying full response details including result data.
+    Used by GET /requests/{id}/response endpoint.
+    """
+    result_data: dict | None = None
+    cache_key: str | None = None
+    meta: dict | None = None

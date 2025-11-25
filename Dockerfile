@@ -32,15 +32,19 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY response-network /app/response-network
-COPY request-network /app/request-network
-COPY shared /app/shared
+COPY . /app
 
 # Set working directory to API
 WORKDIR /app/response-network/api
 
-# Create export directory
-RUN mkdir -p exports/settings exports/users
+# Create export/import directories
+RUN mkdir -p exports/settings exports/users imports/settings imports/users
 
-# Default command (FastAPI)
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set PYTHONPATH to include project root and API directory
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
+# Use entrypoint script for initialization
+ENTRYPOINT ["/app/entrypoint.sh"]

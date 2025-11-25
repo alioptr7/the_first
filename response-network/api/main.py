@@ -19,6 +19,7 @@ from router import request_router, system_router, user_router, monitoring_router
 from router import auth_router, request_type_router, worker_settings, profile_type_router, settings_router
 from routers import admin_tasks
 from routers import admin_export_control
+from routers import admin_panel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -108,6 +109,9 @@ app.include_router(admin_tasks.router, dependencies=[Depends(oauth2_scheme)])
 
 # Admin export control router
 app.include_router(admin_export_control.router, dependencies=[Depends(oauth2_scheme)])
+
+# Admin panel monitoring router
+app.include_router(admin_panel.router, dependencies=[Depends(oauth2_scheme)])
 
 
 @app.on_event("startup")

@@ -5,6 +5,8 @@ from datetime import datetime
 import json
 from pathlib import Path
 import hashlib
+import logging
+import asyncio
 
 from celery import shared_task
 from sqlalchemy.orm import Session
@@ -13,6 +15,7 @@ from core.config import settings
 from core.dependencies import get_db_sync
 from models.request import Request as RequestModel
 
+logger = logging.getLogger(__name__)
 IMPORT_PATH = Path(settings.IMPORT_DIR) / "results"
 
 
@@ -75,6 +78,16 @@ def import_results_from_response_network(self):
                                 request.status = "completed"
                                 request.result_data = result_data.get("result_data")
                                 request.result_received_at = datetime.utcnow()
+                                
+                                # Invalidate cache for this request (async)
+                                try:
+                                    from db.redis_client import RedisClient
+                                    redis = RedisClient(settings.REDIS_URL)
+                                    asyncio.run(redis.invalidate_response(str(request_id)))
+                                    logger.info(f"✅ Invalidated cache for request {request_id}")
+                                except Exception as e:
+                                    logger.warning(f"Could not invalidate cache: {e}")
+                                
                                 imported_count += 1
                         except json.JSONDecodeError:
                             continue

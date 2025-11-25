@@ -25,6 +25,151 @@
 
 ---
 
+## 🔐 Admin User و User Sync Mechanism
+
+### ⭐ Critical Architecture Decision
+
+**Admin users ONLY exist in Response Network!**
+
+- ✅ Admin User: Created in **Response Network** (Master)
+- ✅ User Replica: Synced to **Request Network** automatically
+- ❌ NO direct user creation in Request Network
+- ❌ NO password changes in Request Network
+
+### 🔄 User Sync Process
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Response Network (Master/Source of Truth)                   │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Admin User Created:                                    │  │
+│  │ - create_admin_user.py (one-time setup)               │  │
+│  │ - Models: User with is_admin=True, profile_type=admin │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────┬───────────────────────────────────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │ Celery Task: Every   │
+            │ 5 minutes            │
+            │ export_users_to_     │
+            │ request_network()    │
+            │                      │
+            │ Location: workers/   │
+            │ tasks/users_         │
+            │ exporter.py          │
+            └──────────┬───────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │ Export File:         │
+            │ /exports/users/      │
+            │ latest.json          │
+            │                      │
+            │ Contains:            │
+            │ - All users          │
+            │ - Hashed passwords   │
+            │ - Profile types      │
+            │ - Permissions        │
+            └──────────┬───────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │  MANUAL FILE TRANSFER        │
+        │  (USB / Secure Copy)         │
+        │  to imports/users/latest.json│
+        └──────────────┼──────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Request Network (Read-only Replica)                         │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Celery Task: Every 1 minute                           │  │
+│  │ import_users_from_response_network()                  │  │
+│  │                                                        │  │
+│  │ Location: workers/tasks/users_importer.py             │  │
+│  │                                                        │  │
+│  │ Process:                                              │  │
+│  │ 1. Check /imports/users/latest.json                   │  │
+│  │ 2. Calculate checksum (SHA-256)                       │  │
+│  │ 3. Compare with previous checksum                     │  │
+│  │ 4. If changed: import/update all users                │  │
+│  │ 5. Save new checksum for next cycle                   │  │
+│  │                                                        │  │
+│  │ Result: Users are synced WITHOUT passwords being     │  │
+│  │ exposed during import!                                │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 🔑 Setup Steps
+
+**Setup Order is CRITICAL:**
+
+1. **Response Network MUST be setup first**
+   ```bash
+   # In response-network/api/
+   python -m alembic upgrade head
+   python create_admin_user.py  # Creates admin user in DB
+   ```
+
+2. **Start Response Network Celery Workers**
+   ```bash
+   # Start workers to enable user export
+   python -m celery -A workers.celery_app worker
+   python -m celery -A workers.celery_app beat
+   ```
+
+3. **Request Network Setup**
+   ```bash
+   # In request-network/api/
+   python -m alembic upgrade head
+   python init_setup.py  # Creates import directories
+   ```
+
+4. **Start Request Network Celery Workers**
+   ```bash
+   # Starts automatic user import from Response Network
+   python -m celery -A workers.celery_app worker
+   python -m celery -A workers.celery_app beat
+   ```
+
+### 📁 Directory Structure
+
+```
+# Response Network (Master)
+response-network/api/
+├── models/user.py              # Primary user model with all fields
+├── workers/tasks/
+│   ├── users_exporter.py        # EXPORT users to file (every 5 min)
+│   ├── settings_exporter.py     # EXPORT settings
+│   └── profile_types_exporter.py
+├── exports/
+│   ├── users/
+│   │   ├── latest.json          # Current user export
+│   │   ├── users_YYYYMMDD_*.json
+│   │   └── last_export_meta.json
+│   ├── settings/
+│   └── profile_types/
+
+# Request Network (Replica)
+request-network/api/
+├── models/user.py              # Read-only user replica
+├── workers/tasks/
+│   ├── users_importer.py        # IMPORT users (every 1 min)
+│   ├── settings_importer.py
+│   └── profile_types_importer.py
+├── imports/
+│   ├── users/
+│   │   ├── latest.json          # Latest import file
+│   │   └── .processed_users     # Checksum tracking
+│   ├── settings/
+│   └── profile_types/
+├── exports/
+│   └── requests/               # Requests for Response Network
+```
+
+---
+
 ## 🏗️ معماری کلی سیستم
 
 ```
@@ -484,118 +629,326 @@ responses_YYYYMMDD_HHmmss_<batch_id>.jsonl.enc
 
 ## 🔄 Workflow و Job Scheduling
 
-### Request Network Jobs
+### User Sync Jobs (CRITICAL - Run First!)
 
-#### 1. Export Requests Job
+#### 1. Response Network: Export Users (Every 5 minutes)
 ```python
-Schedule: هر 2 دقیقه
+Task: export_users_to_request_network()
+Location: response-network/api/workers/tasks/users_exporter.py
+Schedule: Every 5 minutes (Celery Beat)
+
+Workflow:
+1. Query all users from Response Network database
+2. Include: id, username, email, hashed_password, is_active, profile_type
+3. Generate JSON file: exports/users/latest.json
+4. Create backup: exports/users/users_YYYYMMDD_HHMMSS.json
+5. Update metadata: exports/users/last_export_meta.json
+6. DELTA sync: Only exports users changed since last export
+
+Output File: exports/users/latest.json
+{
+    "users": [
+        {
+            "id": "uuid",
+            "username": "admin",
+            "email": "admin@example.com",
+            "hashed_password": "bcrypt_hash",
+            "role": "admin",
+            "is_active": true
+        }
+    ],
+    "exported_at": "2024-01-15T10:30:00Z",
+    "total_count": 5
+}
+```
+
+#### 2. Request Network: Import Users (Every 1 minute)
+```python
+Task: import_users_from_response_network()
+Location: request-network/api/workers/tasks/users_importer.py
+Schedule: Every 1 minute (Celery Beat)
+
+Workflow:
+1. Check: imports/users/latest.json exists
+2. Calculate SHA-256 checksum of file
+3. Compare with previous checksum (.processed_users)
+4. If changed:
+   a. Load JSON file
+   b. For each user: INSERT or UPDATE
+   c. Preserve ID from Response Network (NO new ID generation)
+   d. Update all fields: username, email, hashed_password, role, is_active
+5. Save new checksum
+6. Result: Request Network now has synced user data
+
+IMPORTANT: Users are READ-ONLY in Request Network!
+- Cannot modify user data in Request Network
+- All user updates come from Response Network only (DELTA sync)
+- Password verification uses synced hashed_password
+- Only changed users are re-exported (not full dump every time)
+```
+
+#### 3. Manual File Transfer Process
+```
+STEP 1: File Export (Automatic in Response Network)
+  Response Network → exports/users/latest.json
+  (Every 5 minutes, includes ONLY changed users)
+  
+STEP 2: Manual Copy (Manual by Administrator)
+  USB Drive or Secure Copy:
+  exports/users/latest.json → /path/to/transfer/location
+
+STEP 3: File Import (Automatic in Request Network)
+  Copy to: request-network/api/imports/users/latest.json
+  Celery Worker will detect within 1 minute
+  (Checksum verified to avoid re-importing same data)
+
+STEP 4: Sync Confirmation
+  Check Response Network logs:
+    - "Exported X users to: exports/users/latest.json"
+  
+  Check Request Network logs:
+    - "Imported X users, Updated Y users"
+
+STEP 5: Manual Trigger (On-demand)
+  Admin can force exports via API:
+  • POST /api/v1/admin/exports/users (Response Network)
+  • Command: curl -X POST http://localhost:8000/api/v1/admin/exports/users
+```
+
+### Settings & Profile Types Sync Jobs
+
+#### 4. Response Network: Export Settings (On Change)
+```python
+Task: export_settings_to_request_network()
+Location: response-network/api/workers/tasks/settings_exporter.py
+
+Workflow:
+1. Export system settings
+2. Export profile types configuration
+3. Generate: exports/settings/latest.json
+4. Generate: exports/profile_types/latest.json
+```
+
+#### 5. Request Network: Import Settings (Every 1 minute)
+```python
+Task: import_settings_from_response_network()
+Location: request-network/api/workers/tasks/settings_importer.py
+
+Workflow:
+1. Check for new settings files
+2. Import profile types configuration
+3. Update rate limits, request types, etc.
+```
+
+### Request & Response Processing Jobs
+
+#### 6. Request Network: Export Requests Job
+```python
+Task: export_requests_to_response_network()
+Location: request-network/api/workers/tasks/export_requests.py
+Schedule: Every 2 minutes
 Priority: HIGH
 
 Workflow:
 1. Query pending requests (status='pending')
 2. Order by: priority DESC, created_at ASC
-3. Batch size: حداکثر 500 رکورد
-4. Generate JSONL file
-5. Encrypt file
-6. Calculate checksum
-7. Update requests status to 'exported'
-8. Create export_batch record
-9. Move file to /export/ directory
+3. Batch size: Maximum 500 records
+4. Generate JSONL file: exports/requests/requests_YYYYMMDD_HHMMSS.jsonl
+5. Create: exports/requests/latest.jsonl
+6. Encrypt file (optional)
+7. Calculate checksum (SHA-256)
+8. Update requests status to 'exported'
+
+Output: request-network/api/exports/requests/latest.jsonl
 ```
 
-#### 2. Import Results Job
+#### 7. Response Network: Import Requests Job
 ```python
-Schedule: هر 30 ثانیه (polling)
+Task: import_requests_from_request_network()
+Location: response-network/api/workers/tasks/import_requests.py
+Schedule: Every 30 seconds (polling)
 Priority: HIGH
 
 Workflow:
-1. Scan /import/ directory
-2. Validate file format & checksum
-3. Decrypt file
+1. Scan imports/requests/ directory for files
+2. Validate file format & checksum (SHA-256)
+3. Decrypt file (if encrypted)
 4. Parse JSONL
-5. Validate data structure
-6. Insert into responses table
-7. Update requests status to 'completed'
-8. Create import_batch record
-9. Archive file
-10. Send notifications (اگر فعال باشد)
+5. Check for duplicates (by request_id)
+6. Insert into incoming_requests table
+7. Push to Redis queue by priority
+8. Archive processed file
+
+Input: response-network/api/imports/requests/latest.jsonl
 ```
 
-#### 3. Cleanup Job
+#### 8. Response Network: Query Executor Job
 ```python
-Schedule: روزانه ساعت 02:00
-Priority: LOW
-
-Tasks:
-- Archive old requests (>30 days)
-- Delete old export files (>7 days)
-- Clean up Redis expired keys
-- Vacuum PostgreSQL
-- Rotate logs
-```
-
-### Response Network Jobs
-
-#### 1. Import Requests Job
-```python
-Schedule: هر 30 ثانیه (polling)
-Priority: HIGH
-
-Workflow:
-1. Scan /import/ directory
-2. Validate & decrypt file
-3. Parse requests
-4. Check for duplicates (by original_request_id)
-5. Insert into incoming_requests
-6. Push to Redis queue by priority
-7. Create import_batch record
-8. Archive file
-```
-
-#### 2. Query Executor Job
-```python
+Task: execute_elasticsearch_query()
+Location: response-network/api/workers/tasks/query_executor.py
 Schedule: Continuous (Celery worker pool)
 Workers: 4-8 parallel workers
 Priority: HIGH
 
 Workflow:
 1. Pop request from Redis queue (sorted by priority)
-2. Check cache (Redis)
+2. Check cache (Redis) with TTL 300 seconds
 3. If cache miss:
-   a. Build Elasticsearch query
-   b. Execute query
-   c. Store result
-   d. Update cache
-4. Update incoming_requests status
-5. Insert into query_results
-6. Handle errors & retries
+   a. Build Elasticsearch query from request params
+   b. Execute query against Elasticsearch
+   c. Store result in query_results table
+   d. Update cache with TTL
+4. Update incoming_requests status to 'completed'
+5. Handle errors & retry with exponential backoff
 ```
 
-#### 3. Export Results Job
+#### 9. Response Network: Export Results Job
 ```python
-Schedule: هر 2 دقیقه
+Task: export_results_to_request_network()
+Location: response-network/api/workers/tasks/export_results.py
+Schedule: Every 2 minutes
 Priority: HIGH
 
 Workflow:
-1. Query completed results (not exported)
-2. Batch size: 500 رکورد
-3. Generate JSONL
-4. Encrypt file
-5. Calculate checksum
-6. Update exported_at timestamp
-7. Create export_batch record
-8. Move to /export/ directory
+1. Query completed results (exported_at IS NULL)
+2. Batch size: 500 records
+3. Generate JSONL file: exports/results/results_YYYYMMDD_HHMMSS.jsonl
+4. Create: exports/results/latest.jsonl
+5. Encrypt file (optional)
+6. Calculate checksum (SHA-256)
+7. Update exported_at timestamp
+
+Output: response-network/api/exports/results/latest.jsonl
 ```
 
-#### 4. Cache Maintenance Job
+#### 10. Request Network: Import Results Job
 ```python
-Schedule: هر ساعت
+Task: import_results_from_response_network()
+Location: request-network/api/workers/tasks/results_importer.py
+Schedule: Every 30 seconds (polling)
+Priority: HIGH
+
+Workflow:
+1. Scan imports/results/ directory for files
+2. Validate file format & checksum (SHA-256)
+3. Decrypt file (if encrypted)
+4. Parse JSONL
+5. Insert into responses table
+6. Update requests status to 'completed'
+7. Cache results in Redis (TTL: 7 days)
+8. Archive processed file
+
+Input: request-network/api/imports/results/latest.jsonl
+```
+
+### Maintenance Jobs
+
+#### 11. Cleanup Job (Both Networks)
+```python
+Schedule: Daily at 02:00 UTC
 Priority: LOW
 
 Tasks:
-- Clean expired cache entries
-- Identify hot queries
-- Pre-cache popular queries
+- Archive old requests/responses (>30 days)
+- Delete old export files (>7 days)
+- Clean up Redis expired keys
+- Vacuum PostgreSQL
+- Rotate logs
+```
+
+---
+
+## 📊 Complete Data Flow Diagram
+
+```
+REQUEST NETWORK                          RESPONSE NETWORK
+(User-facing)                            (Processing)
+
+┌────────────────────────┐              ┌────────────────────────┐
+│  Users Submit Request  │              │    Admin Creates Users │
+│  via REST API          │              │    (create_admin_user) │
+└───────────┬────────────┘              └───────────┬────────────┘
+            │                                       │
+            ▼                                       ▼
+    ┌──────────────────┐           ┌──────────────────────────┐
+    │ Request Queue    │           │ Response Network Users   │
+    │ (status=pending) │           │ (is_admin=true)          │
+    └────────┬─────────┘           └──────────┬───────────────┘
+             │                                 │
+        [Every 2 min]                    [Every 5 min - DELTA]
+             │                                 │
+             ▼                                 ▼
+    ┌──────────────────────────────────────────────────┐
+    │  export_requests_to_response_network()           │
+    │  Location: request-network/workers/tasks/        │
+    │  Output: exports/requests/latest.jsonl           │
+    └─────────────────┬──────────────────────────────────┘
+                      │
+             ┌────────┴──────────┐
+             │ MANUAL COPY (USB) │
+             └────────┬──────────┘
+                      │
+                      ▼
+    ┌──────────────────────────────────────────────────┐
+    │ response-network/api/imports/requests/           │
+    │ latest.jsonl                                     │
+    └─────────────────┬──────────────────────────────────┘
+                      │
+                 [Every 30s]
+                      │
+                      ▼
+    ┌──────────────────────────────────────────────────┐
+    │  import_requests_from_request_network()          │
+    │  Location: response-network/workers/tasks/       │
+    │  Inserts → incoming_requests table               │
+    │  Pushes → Redis queue (by priority)              │
+    └────────────┬─────────────────────────────────────┘
+                 │
+             [Continuous]
+                 │
+                 ▼
+    ┌──────────────────────────────────────────────────┐
+    │  execute_elasticsearch_query()                   │
+    │  Workers: 4-8 parallel                           │
+    │  Queries Elasticsearch                           │
+    │  Stores → query_results table                    │
+    │  Updates → Redis cache (TTL: 300s)              │
+    └────────────┬─────────────────────────────────────┘
+                 │
+            [Every 2 min]
+                 │
+                 ▼
+    ┌──────────────────────────────────────────────────┐
+    │  export_results_to_request_network()             │
+    │  Location: response-network/workers/tasks/       │
+    │  Output: exports/results/latest.jsonl            │
+    └─────────────────┬──────────────────────────────────┘
+                      │
+             ┌────────┴──────────┐
+             │ MANUAL COPY (USB) │
+             └────────┬──────────┘
+                      │
+                      ▼
+    ┌──────────────────────────────────────────────────┐
+    │ request-network/api/imports/results/             │
+    │ latest.jsonl                                     │
+    └─────────────────┬──────────────────────────────────┘
+                      │
+                 [Every 30s]
+                      │
+                      ▼
+    ┌──────────────────────────────────────────────────┐
+    │  import_results_from_response_network()          │
+    │  Location: request-network/workers/tasks/        │
+    │  Inserts → responses table                       │
+    │  Updates → requests.status = 'completed'         │
+    └─────────────────┬──────────────────────────────────┘
+                      │
+                      ▼
+    ┌──────────────────────────────────────────────────┐
+    │  User gets results via GET /requests/{id}        │
+    │  REST API returns completed response             │
+    └──────────────────────────────────────────────────┘
 ```
 
 ---
@@ -1135,6 +1488,101 @@ Efficiency:
 
 ---
 
+## 🚨 CRITICAL SETUP MISTAKES TO AVOID
+
+### ❌ Common Mistakes
+
+| Mistake | Problem | Solution |
+|---------|---------|----------|
+| **Creating user in Request Network** | Users should ONLY be created in Response Network | Always create users in Response Network first |
+| **Not starting Celery workers** | Import/export tasks won't run | Start both Worker and Beat in both networks |
+| **Starting Request Network before Response Network** | No users to import, sync will fail | ALWAYS setup Response Network first |
+| **Skipping admin user creation** | No way to login to Response Network | Run `python create_admin_user.py` after migrations |
+| **Wrong database selected** | Data corruption, sync failures | Check DB_HOST, DB_PORT, DB_NAME in .env |
+| **Not copying files between networks** | Users won't sync to Request Network | Manually copy exports/users/latest.json to imports/users/ |
+| **Multiple admin users** | Security risk, confusion | Only one admin user per Response Network |
+| **Changing user passwords in Request Network** | Changes will be overwritten on next sync | All password changes MUST be in Response Network |
+| **Docker services not healthy** | Connections fail, tasks error out | Check `docker-compose ps` and `docker-compose logs` |
+| **Port conflicts** | Services can't start | Change ports in docker-compose.yml or .env |
+
+### ✅ Correct Setup Order (MANDATORY)
+
+```
+STEP 1: Docker Setup
+  └─ docker-compose up -d
+  └─ Wait for all services healthy
+  └─ Check: docker-compose ps
+
+STEP 2: Response Network (MUST BE FIRST)
+  ├─ cd response-network/api
+  ├─ python -m alembic upgrade head
+  ├─ python create_admin_user.py         ⭐ Creates admin user
+  └─ Start services:
+     ├─ python -m uvicorn main:app --port 8000
+     ├─ python -m celery -A workers.celery_app worker
+     └─ python -m celery -A workers.celery_app beat
+
+STEP 3: Manual User Export (Automatic via Celery)
+  ├─ Wait 5 minutes for export_users_to_request_network() task
+  ├─ Check: response-network/api/exports/users/latest.json exists
+  └─ File contains all admin and users
+
+STEP 4: Manual File Copy
+  ├─ Copy: response-network/api/exports/users/latest.json
+  └─ To: request-network/api/imports/users/latest.json
+
+STEP 5: Request Network (AFTER Response Network works)
+  ├─ cd request-network/api
+  ├─ python -m alembic upgrade head
+  ├─ python init_setup.py
+  └─ Start services:
+     ├─ python -m uvicorn main:app --port 8001
+     ├─ python -m celery -A workers.celery_app worker
+     └─ python -m celery -A workers.celery_app beat
+
+STEP 6: Verify User Sync
+  ├─ Wait 1 minute for import_users_from_response_network() task
+  ├─ Check Request Network logs: "Imported X users, Updated Y users"
+  └─ Verify login works with admin credentials
+```
+
+### 📊 Expected Behavior After Correct Setup
+
+```
+Timeline:
+─────────
+
+T+0 min:
+  ✓ Response Network running
+  ✓ Admin user created in DB
+  ✓ Celery workers started
+
+T+5 min:
+  ✓ export_users_to_request_network() runs
+  ✓ File created: response-network/api/exports/users/latest.json
+  ✓ Celery log: "✓ Admin user exported"
+
+T+5 min - Manual:
+  ✓ Administrator copies file to Request Network
+
+T+6 min:
+  ✓ Request Network running
+  ✓ Celery workers started
+
+T+7 min:
+  ✓ import_users_from_response_network() runs
+  ✓ Celery log: "✓ Imported 1 users, Updated 0 users"
+  ✓ Admin user now in Request Network database
+
+T+7 min+:
+  ✓ Request Network API accessible
+  ✓ Admin login works
+  ✓ Rate limiting active
+  ✓ Ready for request submissions
+```
+
+---
+
 ## 🔐 Security Checklist
 
 - [ ] AES-256 encryption برای فایل‌ها
@@ -1281,11 +1729,22 @@ Infrastructure:
 
 Application:
   - [ ] Environment variables set
-  - [ ] Database migrations run
+  - [ ] Database migrations run (Response Network first!)
   - [ ] Redis configured
   - [ ] Elasticsearch indexed
   - [ ] Encryption keys generated
-  - [ ] Admin users created
+  - [ ] Admin user created (Response Network)
+
+User Sync Setup:
+  - [ ] Response Network: Celery workers running
+  - [ ] Response Network: Admin user created with create_admin_user.py
+  - [ ] Response Network: export_users_to_request_network() task scheduled
+  - [ ] Verify: response-network/api/exports/users/latest.json created
+  - [ ] Manual: Copy users file to Request Network imports directory
+  - [ ] Request Network: Celery workers running
+  - [ ] Request Network: import_users_from_response_network() task scheduled
+  - [ ] Verify: Users successfully imported into Request Network
+  - [ ] Test: Admin login works in both networks
 
 Security:
   - [ ] Security scan completed
@@ -1293,11 +1752,13 @@ Security:
   - [ ] Secrets rotated
   - [ ] Backups tested
   - [ ] Disaster recovery tested
+  - [ ] Air-gap network isolation verified
 
 Documentation:
   - [ ] API docs published
   - [ ] Admin manual complete
   - [ ] Runbooks ready
+  - [ ] Setup guide (SETUP_GUIDE.md) reviewed
   - [ ] Contact list updated
 ```
 
@@ -1310,14 +1771,23 @@ Documentation:
 - **JWT**: JSON Web Token - برای authentication
 - **Rate Limiting**: محدود کردن تعداد درخواست در بازه زمانی
 - **Celery**: Distributed task queue برای Python
+- **Beat**: Celery scheduler برای تاسک‌های تکراری
 - **Redis**: In-memory data store برای caching و queuing
 - **Batch**: مجموعه‌ای از درخواست‌ها یا پاسخ‌ها که با هم منتقل می‌شوند
 - **Export**: فرآیند تبدیل داده به فایل برای انتقال
 - **Import**: فرآیند خواندن فایل و ذخیره در database
 - **Worker**: Process که task ها را از queue می‌خواند و اجرا می‌کند
+- **Response Network**: شبکه اصلی (Master) - منبع حقیقت داده‌ها
+- **Request Network**: شبکه دوم (Replica) - فقط خواندن کاربران
+- **Delta Sync**: تنها تغییرات از آخرین sync منتقل می‌شوند (نه همه داده)
+- **Checksum**: SHA-256 hash برای تأیید عدم تغییر فایل
+- **Master/Slave**: Response Network = Master, Request Network = Slave
+- **Source of Truth**: Response Network تنها منبع اطلاعات صحیح است
 
 ---
 
-**تاریخ آخرین به‌روزرسانی:** 2025-01-15  
-**نسخه معماری:** 1.0  
-**وضعیت:** In Development
+**تاریخ آخرین به‌روزرسانی:** 2025-11-23  
+**نسخه معماری:** 2.0  
+**وضعیت:** Comprehensive with Admin Setup Guidelines  
+**نویسندگان:** Architecture Team  
+**مسئول:** DevOps & Backend Team

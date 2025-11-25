@@ -1,35 +1,50 @@
-# Celery Beat Dockerfile
+# Build stage
 FROM python:3.11-slim as builder
 
 WORKDIR /app
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-COPY response-network/api/requirements.txt .
+# Copy unified requirements
+COPY requirements.txt .
+
+# Create virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Final stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Copy application code
 COPY . /app
 
-WORKDIR /app/response-network/api
+# Set working directory to API
+WORKDIR /app/request-network/api
+
+# Create export/import directories
+RUN mkdir -p exports/requests imports/requests imports/users imports/settings
 
 # Set PYTHONPATH to include project root and API directory
 ENV PYTHONPATH="/app:${PYTHONPATH}"
 
-# Celery Beat command
-CMD ["python", "-m", "celery", "-A", "workers.celery_app", "beat", "--loglevel=info"]
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint-request.sh
+
+# Use entrypoint script for initialization
+ENTRYPOINT ["/app/entrypoint-request.sh"]

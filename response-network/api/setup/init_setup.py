@@ -5,6 +5,7 @@ This script:
 2. Runs database migrations
 3. Creates initial admin user
 4. Sets up base worker settings
+5. Seeds sample data (if SEED_DATA=true)
 """
 import asyncio
 import sys
@@ -150,6 +151,29 @@ async def setup_base_worker_settings():
         return True
 
 
+def seed_sample_data():
+    """Seed sample development data (only if SEED_DATA env var is true)"""
+    should_seed = os.getenv("SEED_DATA", "false").lower() == "true"
+    
+    if not should_seed:
+        print("\n⏭️  Skipping sample data seeding (set SEED_DATA=true to enable)")
+        return True
+    
+    print("\n🌱 Seeding sample data...")
+    
+    try:
+        from setup.initialization import create_default_admin, seed_sample_users
+        
+        admin_created = create_default_admin()
+        users_created = seed_sample_users()
+        
+        print(f"✅ Sample data seeded (admin: {admin_created}, users: {users_created})")
+        return True
+    except Exception as e:
+        print(f"⚠️  Failed to seed sample data: {str(e)}")
+        return True  # Don't fail setup if seeding fails
+
+
 def print_setup_summary():
     """Print setup summary and next steps."""
     print("\n" + "="*60)
@@ -198,6 +222,9 @@ async def main():
         if not await setup_base_worker_settings():
             print("❌ Setup failed at worker settings")
             return False
+        
+        # Step 5: Seed sample data (optional)
+        seed_sample_data()
         
         print_setup_summary()
         return True

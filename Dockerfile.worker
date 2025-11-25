@@ -24,13 +24,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY response-network /app/response-network
-COPY request-network /app/request-network
-COPY shared /app/shared
+COPY . /app
 
 WORKDIR /app/response-network/api
 
-RUN mkdir -p exports/settings exports/users
+RUN mkdir -p exports/settings exports/users imports/settings imports/users
+
+# Set PYTHONPATH to include project root and API directory
+ENV PYTHONPATH="/app:${PYTHONPATH}"
 
 # Celery Worker command
 CMD ["python", "-m", "celery", "-A", "workers.celery_app", "worker", "--pool=solo", "--loglevel=info"]

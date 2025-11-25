@@ -9,11 +9,14 @@ from sqlalchemy.orm import selectinload
 from core.validation import validate_request_payload
 from core.rate_limiter import RateLimiter
 from db.session import get_db_session
+from db.redis_client import get_redis_client
 from models.user import User
 from models.request import Request
+from models.response import Response
 from auth.dependencies import get_current_active_user
 # from rate_limiter import check_rate_limit  # TODO: Fix rate limiter
 from schemas.request import RequestCreate, RequestPublic, RequestStatus
+from schemas.response import ResponseDetailed
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 rate_limiter = RateLimiter()
@@ -152,6 +155,59 @@ async def get_request_status(
     """
     request = await get_request_or_404(request_id, current_user, db)
     return request
+
+
+@router.get("/{request_id}/response", response_model=ResponseDetailed)
+async def get_request_response(
+    request_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Retrieve the response for a completed request with Redis caching support.
+    
+    This endpoint:
+    1. Checks Redis cache first (fast path)
+    2. Falls back to database if not cached
+    3. Caches the result in Redis for 24 hours
+    4. Returns 404 if request doesn't exist or has no response yet
+    
+    Returns:
+    - ResponseDetailed with full result_data, execution time, etc.
+    - 404: Request not found or no response available yet
+    - 403: User doesn't own the request
+    """
+    request = await get_request_or_404(request_id, current_user, db)
+    
+    # Try to get from Redis cache first
+    redis_client = await get_redis_client()
+    cached_response = await redis_client.get_response(str(request_id))
+    
+    if cached_response:
+        return ResponseDetailed(**cached_response)
+    
+    # If not in cache, get from database
+    response_query = select(Response).where(Response.request_id == request_id)
+    response_result = await db.execute(response_query)
+    response = response_result.scalar_one_or_none()
+    
+    if not response:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Response not available yet. Request is still being processed."
+        )
+    
+    # Convert to schema
+    response_data = ResponseDetailed.model_validate(response)
+    
+    # Cache the response in Redis
+    await redis_client.set_response(
+        str(request_id),
+        response_data.model_dump(),
+        ttl_hours=24
+    )
+    
+    return response_data
 
 
 @router.delete(
