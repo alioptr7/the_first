@@ -146,7 +146,7 @@ export default function SettingsPage() {
               <Label htmlFor="theme">پوسته</Label>
               <Select
                 value={state.theme}
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   setState((prev) => ({
                     ...prev,
                     theme: value as "light" | "dark" | "system",
@@ -187,7 +187,7 @@ export default function SettingsPage() {
               <Switch
                 id="auto-refresh"
                 checked={state.autoRefresh}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   setState((prev) => ({ ...prev, autoRefresh: checked }))
                 }
               />
@@ -197,7 +197,7 @@ export default function SettingsPage() {
             {state.autoRefresh && (
               <div className="space-y-3">
                 <Label htmlFor="refresh-interval">بازه زمانی تازه‌سازی (ثانیه)</Label>
-                <Select value={state.refreshInterval} onValueChange={(value) =>
+                <Select value={state.refreshInterval} onValueChange={(value: string) =>
                   setState((prev) => ({ ...prev, refreshInterval: value }))
                 }>
                   <SelectTrigger id="refresh-interval">
@@ -236,7 +236,7 @@ export default function SettingsPage() {
               <Switch
                 id="notifications"
                 checked={state.notifications}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked: boolean) =>
                   setState((prev) => ({ ...prev, notifications: checked }))
                 }
               />

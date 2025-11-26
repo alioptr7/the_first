@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ export default function DashboardPage() {
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">خوش آمدید، {user?.full_name || user?.username}!</h1>
+          <h1 className="text-3xl font-bold">خوش آمدید، {user?.username}!</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Response Network Admin Panel
           </p>
@@ -45,14 +45,8 @@ export default function DashboardPage() {
                 <span>{user?.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium">نوع حساب:</span>
-                <span className="capitalize">{user?.profile_type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">وضعیت:</span>
-                <span className={user?.is_active ? "text-green-600" : "text-red-600"}>
-                  {user?.is_active ? "فعال" : "غیرفعال"}
-                </span>
+                <span className="font-medium">نقش:</span>
+                <span className="capitalize">{user?.role === "admin" ? "مدیر" : "کاربر عادی"}</span>
               </div>
             </div>
           </CardContent>

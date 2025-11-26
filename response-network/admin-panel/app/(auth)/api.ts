@@ -28,9 +28,8 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
         headers: config.headers,
         withCredentials: config.withCredentials,
         timeout: config.timeout,
-      data: config.data,
-      withCredentials: config.withCredentials,
-    });
+        data: config.data,
+      });
     return config;
   });
 
