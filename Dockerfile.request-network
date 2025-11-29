@@ -1,0 +1,47 @@
+# Build stage for Request Network
+FROM python:3.11-slim as builder
+
+WORKDIR /build
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Request Network requirements
+COPY request-network/api/requirements.txt .
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Final stage
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy ONLY Request Network API code
+COPY request-network/api /app
+
+# Create import/export directories
+RUN mkdir -p imports/users imports/requests imports/results exports/requests
+
+# Set PYTHONPATH to include app directory
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
+# Make entrypoint executable (if exists)
+RUN if [ -f /entrypoint-request.sh ]; then chmod +x /entrypoint-request.sh; fi
+
+# Default command (can be overridden)
+CMD ["python", "main.py"]

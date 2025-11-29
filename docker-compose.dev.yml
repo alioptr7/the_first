@@ -47,74 +47,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  celery-beat-request:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: celery-beat-request
-    profiles: ["request", "all"]
-    labels:
-      - "project.group=request-network"
-      - "project.service=workers"
-    working_dir: /app/request-network
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
-    command: celery -A workers.celery_app beat -l info
-    volumes:
-      - .:/app
-    networks:
-      - app-net
-    depends_on:
-      redis-request:
-        condition: service_healthy
-      postgres-request:
-        condition: service_healthy
-    restart: unless-stopped
-
-  celery-worker-request:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: celery-worker-request
-    profiles: ["request", "all"]
-    labels:
-      - "project.group=request-network"
-      - "project.service=workers"
-    working_dir: /app/request-network
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
-    command: celery -A workers.celery_app worker -l info --concurrency=2
-    volumes:
-      - .:/app
-    networks:
-      - app-net
-    depends_on:
-      redis-request:
-        condition: service_healthy
-      postgres-request:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # flower-request:
-  #   image: mher/flower
-  #   container_name: flower-request
-  #   profiles: ["request", "all"]
-  #   labels:
-  #     - "project.group=request-network"
-  #     - "project.service=monitoring"
-  #   environment:
-  #     - CELERY_BROKER_URL=redis://redis-request:6379/0
-  #     - FLOWER_PORT=5555
-  #   ports:
-  #     - "5555:5555" # Request Network Flower on port 5555
-  #   networks:
-  #     - app-net
-  #   depends_on:
-  #     - redis-request
-  #   restart: unless-stopped
-
   # ------------------- Response Network Services ------------------
   postgres-response:
     image: postgres:15-alpine
@@ -124,8 +56,8 @@ services:
       - "project.group=response-network"
       - "project.service=database"
     environment:
-      - POSTGRES_USER=${RESPONSE_DB_USER:-user}
-      - POSTGRES_PASSWORD=${RESPONSE_DB_PASSWORD:-password}
+      - POSTGRES_USER=${RESPONSE_DB_USER:-respuser}
+      - POSTGRES_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
       - POSTGRES_DB=${RESPONSE_DB_NAME:-response_db}
     ports:
       - "5433:5432"
@@ -134,7 +66,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${RESPONSE_DB_USER:-user}", "-d", "${RESPONSE_DB_NAME:-response_db}"]
+      test: ["CMD", "pg_isready", "-U", "${RESPONSE_DB_USER:-respuser}", "-d", "${RESPONSE_DB_NAME:-response_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -170,8 +102,8 @@ services:
       - "project.service=search"
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false # For development only
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g" # Development memory limit
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -186,93 +118,27 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # flower-response:
-  #   image: mher/flower
-  #   container_name: flower-response
-  #   profiles: ["response", "all"]
-  #   labels:
-  #     - "project.group=response-network"
-  #     - "project.service=monitoring"
-  #   environment:
-  #     - CELERY_BROKER_URL=redis://redis-response:6379/0
-  #     - FLOWER_PORT=5555
-  #   ports:
-  #     - "5556:5555" # Response Network Flower on port 5556
-  #   networks:
-  #     - app-net
-  #   depends_on:
-  #     - redis-response
-  #   restart: unless-stopped
-
-  celery-beat-response:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: celery-beat-response
-    profiles: ["response", "all"]
-    labels:
-      - "project.group=response-network"
-      - "project.service=workers"
-    working_dir: /app/response-network/api
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app:/app/response-network/api
-    command: celery -A workers.celery_app beat -l info
-    volumes:
-      - .:/app
-    networks:
-      - app-net
-    depends_on:
-      redis-response:
-        condition: service_healthy
-      postgres-response:
-        condition: service_healthy
-    restart: unless-stopped
-
-  celery-worker-response:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: celery-worker-response
-    profiles: ["response", "all"]
-    labels:
-      - "project.group=response-network"
-      - "project.service=workers"
-    working_dir: /app/response-network/api
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app:/app/response-network/api
-    command: celery -A workers.celery_app worker -l info --concurrency=2
-    volumes:
-      - .:/app
-    networks:
-      - app-net
-    depends_on:
-      redis-response:
-        condition: service_healthy
-      postgres-response:
-        condition: service_healthy
-    restart: unless-stopped
-
   # ------------------- Request Network API -------------------
   api-request:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.request-network
     container_name: api-request
     profiles: ["request", "all"]
     labels:
       - "project.group=request-network"
       - "project.service=api"
-    working_dir: /app/request-network/api
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
+      - REQUEST_DB_HOST=postgres-request
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
     networks:
       - app-net
     depends_on:
@@ -282,31 +148,148 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  celery-worker-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-worker-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    networks:
+      - app-net
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-beat-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+    command: celery -A workers.celery_app beat -l info
+    networks:
+      - app-net
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request:
+        condition: service_healthy
+    restart: unless-stopped
+
   # ------------------- Response Network API -------------------
   api-response:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.response
     container_name: api-response
     profiles: ["response", "all"]
     labels:
       - "project.group=response-network"
       - "project.service=api"
-    working_dir: /app/response-network/api
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
+      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
     ports:
       - "8001:8001"
-    volumes:
-      - .:/app
     networks:
       - app-net
     depends_on:
       postgres-response:
         condition: service_healthy
       redis-response:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker-response:
+    build:
+      context: .
+      dockerfile: Dockerfile.response
+    container_name: celery-worker-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    networks:
+      - app-net
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat-response:
+    build:
+      context: .
+      dockerfile: Dockerfile.response
+    container_name: celery-beat-response
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    command: celery -A workers.celery_app beat -l info
+    networks:
+      - app-net
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy

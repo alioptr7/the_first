@@ -35,3 +35,5 @@ out/
 logs/
 exports/
 celerybeat-schedule
+shared/
+
