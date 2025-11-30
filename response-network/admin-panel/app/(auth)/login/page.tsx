@@ -57,7 +57,7 @@ export default function LoginPage() {
       formData.append("username", values.username);
       formData.append("password", values.password);
 
-      const response = await api.post("/auth/login", formData);
+      const response = await api.post("/api/v1/auth/login", formData);
 
       // Extract token from response
       const token = response.data.access_token;

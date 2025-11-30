@@ -18,7 +18,7 @@ from db.session import get_db_session
 from models.user import User
 from models.incoming_request import IncomingRequest
 from models.query_result import QueryResult
-from auth.dependencies import require_admin
+from auth.dependencies import get_current_admin_user
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ async def admin_health_check(
 @router.get("/health/detailed")
 async def admin_health_detailed(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Detailed health check with service metrics
@@ -153,7 +153,7 @@ async def admin_health_detailed(
 @router.get("/stats/system")
 async def get_system_stats(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get overall system statistics
@@ -217,7 +217,7 @@ async def get_system_stats(
 
 @router.get("/stats/queues")
 async def get_queue_stats(
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get Celery task queue statistics
@@ -249,7 +249,7 @@ async def get_queue_stats(
 
 @router.get("/stats/cache")
 async def get_cache_stats(
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get Redis cache statistics and performance metrics
@@ -294,7 +294,7 @@ async def get_cache_stats(
 
 @router.delete("/cache/clear")
 async def clear_cache(
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Clear all cache (use with caution!)
@@ -319,7 +319,7 @@ async def clear_cache(
 
 @router.post("/cache/optimize")
 async def optimize_cache(
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Optimize Redis cache (cleanup, rebalance, etc.)
@@ -356,7 +356,7 @@ async def list_users(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     skip: int = 0,
     limit: int = 100,
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     List all users with pagination
@@ -393,7 +393,7 @@ async def list_users(
 async def get_user_details(
     user_id: str,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get detailed information about a specific user
@@ -436,7 +436,7 @@ async def get_user_details(
 async def get_recent_requests(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     limit: int = 20,
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get recent requests with their status
@@ -471,7 +471,7 @@ async def get_recent_requests(
 @router.get("/requests/stats")
 async def get_request_stats(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    _: Annotated[None, Depends(require_admin)] = None,
+    _: Annotated[None, Depends(get_current_admin_user)] = None,
 ):
     """
     Get request statistics by status

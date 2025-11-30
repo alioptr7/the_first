@@ -2,11 +2,13 @@ import logging
 import sys
 import os
 from pathlib import Path
+from typing import Annotated
+from datetime import timedelta
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import redis
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status, Response
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +22,7 @@ from router import auth_router, request_type_router, worker_settings, profile_ty
 from routers import admin_tasks
 from routers import admin_export_control
 from routers import admin_panel
+from routers import frontend_auth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -95,6 +98,9 @@ app.include_router(
 # Auth router doesn't need the security scheme as it contains the login endpoint
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 
+# Also register auth endpoints at root level for frontend compatibility
+# We'll add a simple redirect/proxy endpoint
+
 # Worker settings router
 app.include_router(worker_settings.router, prefix=settings.API_V1_STR)
 
@@ -112,6 +118,81 @@ app.include_router(admin_export_control.router, dependencies=[Depends(oauth2_sch
 
 # Admin panel monitoring router
 app.include_router(admin_panel.router, dependencies=[Depends(oauth2_scheme)])
+
+
+# ============================================================================
+# Frontend Auth Endpoints (at root level for frontend compatibility)
+# ============================================================================
+
+from fastapi.security import OAuth2PasswordRequestForm
+from auth import security
+from core.hashing import verify_password
+from models.schemas import Token
+from models.user import User
+
+@app.post("/auth/login", response_model=Token, tags=["auth"])
+async def frontend_login(
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Frontend login endpoint - at root level"""
+    from sqlalchemy.future import select
+    
+    # Find user by username or email
+    query = select(User).where(
+        (User.username == form_data.username) | (User.email == form_data.username)
+    )
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    # Check credentials
+    if (
+        not user
+        or not user.is_active
+        or not verify_password(form_data.password, user.hashed_password)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Create JWT token
+    access_token_expires = timedelta(days=7)
+    access_token = security.create_access_token(
+        data={"user_id": str(user.id), "scopes": [user.profile_type]},
+        expires_delta=access_token_expires,
+    )
+
+    # Set cookie
+    response.set_cookie(
+        "access_token",
+        value=f"Bearer {access_token}",
+        max_age=int(access_token_expires.total_seconds()),
+        path="/",
+        secure=False,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/auth/me", tags=["auth"])
+async def frontend_get_me(
+    current_user: Annotated[User, Depends(security.get_current_user)]
+):
+    """Get current user info"""
+    from schemas.user import UserRead
+    return UserRead.from_orm(current_user)
+
+
+@app.post("/auth/logout", tags=["auth"])
+async def frontend_logout(response: Response):
+    """Logout endpoint"""
+    response.delete_cookie("access_token", path="/")
+    return {"detail": "Successfully logged out"}
 
 
 @app.on_event("startup")

@@ -148,59 +148,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  celery-worker-request:
-    build:
-      context: .
-      dockerfile: Dockerfile.request-network
-    container_name: celery-worker-request
-    profiles: ["request", "all"]
-    labels:
-      - "project.group=request-network"
-      - "project.service=workers"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REQUEST_DB_HOST=postgres-request
-      - REQUEST_DB_PORT=5432
-      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
-      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
-      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
-      - REDIS_URL=redis://redis-request:6379/0
-    command: celery -A workers.celery_app worker -l info --concurrency=2
-    networks:
-      - app-net
-    depends_on:
-      redis-request:
-        condition: service_healthy
-      postgres-request:
-        condition: service_healthy
-    restart: unless-stopped
 
-  celery-beat-request:
-    build:
-      context: .
-      dockerfile: Dockerfile.request-network
-    container_name: celery-beat-request
-    profiles: ["request", "all"]
-    labels:
-      - "project.group=request-network"
-      - "project.service=workers"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - REQUEST_DB_HOST=postgres-request
-      - REQUEST_DB_PORT=5432
-      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
-      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
-      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
-      - REDIS_URL=redis://redis-request:6379/0
-    command: celery -A workers.celery_app beat -l info
-    networks:
-      - app-net
-    depends_on:
-      redis-request:
-        condition: service_healthy
-      postgres-request:
-        condition: service_healthy
-    restart: unless-stopped
 
   # ------------------- Response Network API -------------------
   api-response:
@@ -293,6 +241,27 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Admin Panel (Frontend) -------------------
+  admin-panel:
+    build:
+      context: response-network/admin-panel
+      dockerfile: Dockerfile
+    container_name: admin-panel
+    profiles: ["response", "all"]
+    labels:
+      - "project.group=response-network"
+      - "project.service=frontend"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    networks:
+      - app-net
+    depends_on:
+      - api-response
     restart: unless-stopped
 
 volumes:
