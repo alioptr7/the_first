@@ -5,7 +5,7 @@ Model for storing user profile types with their configurations
 import uuid
 from typing import List
 from sqlalchemy import String, Boolean, JSON, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, ARRAY
 
 from shared.database.base import Base, TimestampMixin
@@ -67,3 +67,6 @@ class ProfileTypeConfig(Base, TimestampMixin):
         
         # اگر allowed list پُر باشد، فقط آن‌ها مجاز هستند
         return request_type in allowed and request_type not in blocked
+
+    # Relationships
+    request_access: Mapped[List["ProfileTypeRequestAccess"]] = relationship("ProfileTypeRequestAccess", back_populates="profile_type")

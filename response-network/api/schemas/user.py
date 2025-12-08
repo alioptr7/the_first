@@ -17,7 +17,7 @@ class UserBase(BaseModel):
 
 class UserRead(UserBase):
     """Properties to return to a client."""
-    id: int
+    id: uuid.UUID
     profile_type: str
     is_active: bool
     daily_request_limit: int

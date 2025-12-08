@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
 
-from core.dependencies import get_current_superuser, get_db
+from auth.dependencies import get_current_user
+from core.dependencies import get_db
 from crud.worker_settings import worker_settings_crud
 from schemas.worker_settings import (
     WorkerSettings,
@@ -13,19 +14,17 @@ from schemas.worker_settings import (
 from services.worker_manager import validate_storage_config, validate_schedule_config
 
 router = APIRouter(
-    prefix="/api/v1/worker-settings",
+    prefix="/worker-settings",
     tags=["worker-settings"],
-    dependencies=[Depends(get_current_superuser)],
+    dependencies=[Depends(get_current_user)],
 )
 
 @router.get("/", response_model=List[WorkerSettings])
 async def list_worker_settings(
-    skip: int = 0,
-    limit: int = 100,
     db: AsyncSession = Depends(get_db),
 ):
     """List all worker settings."""
-    return await worker_settings_crud.get_multi(db, skip=skip, limit=limit)
+    return await worker_settings_crud.get_all(db)
 
 @router.get("/{worker_id}", response_model=WorkerSettings)
 async def get_worker_settings(

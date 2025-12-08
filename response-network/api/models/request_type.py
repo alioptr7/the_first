@@ -19,7 +19,7 @@ class RequestType(BaseModel, UUIDMixin, TimestampMixin):
     version: Mapped[str] = mapped_column(String(50), nullable=False, default="1.0.0")
     max_items_per_request: Mapped[int] = mapped_column(nullable=False, default=100)
     available_indices: Mapped[List[str]] = mapped_column(ARRAY(String), nullable=False, default=lambda: ["default"])
-    elasticsearch_query_template: Mapped[dict] = mapped_column(JSON, nullable=False)
+    elasticsearch_query_template: Mapped[dict] = mapped_column(JSON, nullable=True, default=lambda: {})
 
     created_by_id: Mapped[UUID] = mapped_column(PGUUID, ForeignKey("users.id"), nullable=False, default=None)
     created_by: Mapped["User"] = relationship("User", back_populates="created_request_types")
@@ -27,3 +27,4 @@ class RequestType(BaseModel, UUIDMixin, TimestampMixin):
     # Relationships
     parameters: Mapped[List["RequestTypeParameter"]] = relationship("RequestTypeParameter", back_populates="request_type", cascade="all, delete-orphan")
     user_access: Mapped[List["UserRequestAccess"]] = relationship("UserRequestAccess", back_populates="request_type")
+    profile_access: Mapped[List["ProfileTypeRequestAccess"]] = relationship("ProfileTypeRequestAccess", back_populates="request_type")

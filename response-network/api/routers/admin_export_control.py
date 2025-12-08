@@ -23,6 +23,8 @@ async def get_export_config(
     
     Returns what data gets exported and any filtering rules.
     """
+    from core.config import settings as app_settings
+    
     return ExportConfigResponse(
         settings_export_enabled=True,
         settings_filter_by_is_public=True,
@@ -32,7 +34,15 @@ async def get_export_config(
         profile_types_export_enabled=True,
         profile_types_filter_by_is_active=True,
         export_interval_seconds=60,
-        message="Export configuration is currently hardcoded. These settings will control Celery tasks in future."
+        destination_type=app_settings.EXPORT_DESTINATION_TYPE,
+        local_path=app_settings.EXPORT_DIR if app_settings.EXPORT_DESTINATION_TYPE == "local" else None,
+        ftp_host=app_settings.EXPORT_FTP_HOST if app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        ftp_port=app_settings.EXPORT_FTP_PORT if app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        ftp_username=app_settings.EXPORT_FTP_USERNAME if app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        ftp_password="***" if app_settings.EXPORT_FTP_PASSWORD and app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        ftp_path=app_settings.EXPORT_FTP_PATH if app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        ftp_use_tls=app_settings.EXPORT_FTP_USE_TLS if app_settings.EXPORT_DESTINATION_TYPE == "ftp" else None,
+        message="Export configuration loaded from environment settings."
     )
 
 
@@ -69,6 +79,11 @@ async def update_export_config(
     }
     ```
     """
+    from core.config import settings as app_settings
+    
+    # Note: Currently these settings are read from environment variables
+    # In future, we could store them in database for runtime updates
+    
     return ExportConfigResponse(
         settings_export_enabled=config.settings_export_enabled,
         settings_filter_by_is_public=config.settings_filter_by_is_public,
@@ -78,7 +93,15 @@ async def update_export_config(
         profile_types_export_enabled=config.profile_types_export_enabled,
         profile_types_filter_by_is_active=config.profile_types_filter_by_is_active,
         export_interval_seconds=config.export_interval_seconds,
-        message="✅ Export configuration updated. Changes will take effect on next export cycle."
+        destination_type=config.destination_type or app_settings.EXPORT_DESTINATION_TYPE,
+        local_path=config.local_path or app_settings.EXPORT_DIR,
+        ftp_host=config.ftp_host or app_settings.EXPORT_FTP_HOST,
+        ftp_port=config.ftp_port or app_settings.EXPORT_FTP_PORT,
+        ftp_username=config.ftp_username or app_settings.EXPORT_FTP_USERNAME,
+        ftp_password="***" if config.ftp_password or app_settings.EXPORT_FTP_PASSWORD else None,
+        ftp_path=config.ftp_path or app_settings.EXPORT_FTP_PATH,
+        ftp_use_tls=config.ftp_use_tls if config.ftp_use_tls is not None else app_settings.EXPORT_FTP_USE_TLS,
+        message="✅ Export configuration updated. Note: Destination settings require environment variable updates or database storage (future feature)."
     )
 
 
@@ -96,13 +119,15 @@ async def test_exports(
     from workers.tasks.settings_exporter import export_settings_to_request_network
     from workers.tasks.users_exporter import export_users_to_request_network
     from workers.tasks.profile_types_exporter import export_profile_types_to_request_network
+    from workers.tasks.export_results import export_completed_results
     
     try:
         # Run all export tasks immediately
         job = group(
             export_settings_to_request_network.s(),
             export_users_to_request_network.s(),
-            export_profile_types_to_request_network.s()
+            export_profile_types_to_request_network.s(),
+            export_completed_results.s()
         )
         result = job.apply_async()
         
@@ -113,7 +138,8 @@ async def test_exports(
             "tasks": {
                 "settings": "export_settings_to_request_network",
                 "users": "export_users_to_request_network",
-                "profile_types": "export_profile_types_to_request_network"
+                "profile_types": "export_profile_types_to_request_network",
+                "results": "export_completed_results"
             }
         }
     except Exception as e:
@@ -142,25 +168,30 @@ async def get_export_status(
     
     export_dir = Path(settings.EXPORT_DIR)
     status_data = {
-        "settings": {"file": None, "total_count": 0, "exported_at": None},
-        "users": {"file": None, "total_count": 0, "exported_at": None},
-        "profile_types": {"file": None, "total_count": 0, "exported_at": None},
-    }
-    
-    # Check each export file
-    for export_type in ["settings", "users", "profile_types"]:
-        latest_file = export_dir / export_type / "latest.json"
-        if latest_file.exists():
-            try:
-                with open(latest_file) as f:
-                    data = json.load(f)
-                status_data[export_type]["file"] = str(latest_file)
-                status_data[export_type]["total_count"] = data.get("total_count", 0)
-                status_data[export_type]["exported_at"] = data.get("exported_at", None)
-            except Exception as e:
-                status_data[export_type]["error"] = str(e)
-    
-    return {
         "status": "ok",
-        "exports": status_data
+        "exports": {
+            "settings": {"file": None, "total_count": 0, "exported_at": None},
+            "users": {"file": None, "total_count": 0, "exported_at": None},
+            "profile_types": {"file": None, "total_count": 0, "exported_at": None},
+            "results": {"file": None, "total_count": 0, "exported_at": None}
+        }
     }
+    
+    # Check each export type for latest file
+    for export_type in ["settings", "users", "profile_types", "results"]:
+        type_dir = export_dir / export_type
+        if type_dir.exists():
+            latest_file = type_dir / "latest.json"
+            if latest_file.exists():
+                try:
+                    with open(latest_file, 'r') as f:
+                        data = json.load(f)
+                        status_data["exports"][export_type] = {
+                            "file": str(latest_file),
+                            "total_count": data.get("total_count", 0),
+                            "exported_at": data.get("exported_at")
+                        }
+                except Exception as e:
+                    status_data["exports"][export_type]["error"] = str(e)
+    
+    return status_data

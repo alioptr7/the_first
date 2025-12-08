@@ -37,10 +37,10 @@ class TaskAction(BaseModel):
 
 
 class WorkerStats(BaseModel):
-    """آمار Worker"""
+    """Worker statistics"""
     worker_name: str
-    pool_type: str
-    max_concurrency: int
+    pool_type: str = "prefork"
+    max_concurrency: int = 0
     active_tasks: int
     processed_tasks: int
     offline: bool

@@ -15,6 +15,11 @@ import {
   Menu,
   Moon,
   Sun,
+  Shield,
+  FileCode,
+  Server,
+  ListTodo,
+  Download,
 } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "next-themes";
@@ -31,14 +36,39 @@ const navigation = [
     icon: Users,
   },
   {
+    name: "انواع درخواست",
+    href: "/dashboard/request-types",
+    icon: FileCode,
+  },
+  {
     name: "درخواست‌ها",
     href: "/dashboard/requests",
     icon: Zap,
   },
   {
+    name: "ورکرها",
+    href: "/dashboard/workers",
+    icon: Server,
+  },
+  {
+    name: "صف و تسک‌ها",
+    href: "/dashboard/tasks",
+    icon: ListTodo,
+  },
+  {
+    name: "تنظیمات خروجی",
+    href: "/dashboard/exports",
+    icon: Download,
+  },
+  {
     name: "کش و بهینه‌سازی",
     href: "/dashboard/cache",
     icon: HardDrive,
+  },
+  {
+    name: "انواع پروفایل",
+    href: "/dashboard/profile-types",
+    icon: Shield,
   },
   {
     name: "تنظیمات",
@@ -71,6 +101,8 @@ export default function DashboardLayout({
 
   const handleLogout = () => {
     logout();
+    // Clear auth token cookie
+    document.cookie = "auth-token=; path=/; max-age=0; SameSite=Lax";
     router.push("/login");
   };
 
@@ -95,9 +127,8 @@ export default function DashboardLayout({
       <div className="flex h-screen flex-col lg:flex-row lg:overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`${
-            sidebarOpen ? "block" : "hidden"
-          } lg:block fixed lg:relative w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-10 mt-14 lg:mt-0`}
+          className={`${sidebarOpen ? "block" : "hidden"
+            } lg:block fixed lg:relative w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-10 mt-14 lg:mt-0`}
         >
           <nav className="space-y-1 px-2 py-4">
             {navigation.map((item) => {

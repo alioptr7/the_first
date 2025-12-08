@@ -30,7 +30,6 @@ type FormSchema = z.infer<typeof loginFormSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setToken } = useAuthStore();
-  const { theme, setTheme } = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -57,20 +56,56 @@ export default function LoginPage() {
       formData.append("username", values.username);
       formData.append("password", values.password);
 
-      const response = await api.post("/api/v1/auth/login", formData);
+      console.log("Sending login request with:", {
+        url: `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`,
+        data: formData.toString(),
+      });
+
+      const response = await api.post("/api/v1/auth/login", formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
 
       // Extract token from response
       const token = response.data.access_token;
-      const user = {
-        id: response.data.user_id || values.username,
-        username: values.username,
-        email: response.data.email || "",
-        role: response.data.role || "user",
-      };
 
-      // Update auth store
+      // Set token first so subsequent API calls are authenticated
       setToken(token);
-      setUser(user);
+
+      // Set auth token in cookie for middleware
+      document.cookie = `auth-token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+
+      // Fetch complete user data from /api/v1/users/me
+      try {
+        const userResponse = await api.get("/api/v1/users/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Map profile_type to role for consistency
+        const userData = userResponse.data;
+        const user = {
+          id: userData.id || values.username,
+          username: userData.username || values.username,
+          email: userData.email || "",
+          role: userData.role || (userData.profile_type === "admin" ? "admin" : "user"),
+          profile_type: userData.profile_type,
+        };
+
+        setUser(user);
+      } catch (userError) {
+        console.error("Failed to fetch user data:", userError);
+        // Fallback to basic user data from login response
+        const user = {
+          id: response.data.user_id || values.username,
+          username: values.username,
+          email: response.data.email || "",
+          role: response.data.role || "user",
+        };
+        setUser(user);
+      }
 
       // Redirect to dashboard
       router.push("/dashboard");

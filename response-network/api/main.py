@@ -22,7 +22,7 @@ from router import auth_router, request_type_router, worker_settings, profile_ty
 from routers import admin_tasks
 from routers import admin_export_control
 from routers import admin_panel
-from routers import frontend_auth
+from routers import profile_type_access
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,6 +57,8 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "http://0.0.0.0:3000",
         "http://0.0.0.0:3001",
+        "http://192.168.214.139:3000",
+        "http://192.168.214.139:3001",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -73,8 +75,7 @@ app.include_router(
 )
 app.include_router(
     system_router, 
-    prefix=settings.API_V1_STR,
-    dependencies=[Depends(oauth2_scheme)]
+    prefix=settings.API_V1_STR
 )
 app.include_router(
     user_router, 
@@ -83,7 +84,7 @@ app.include_router(
 )
 app.include_router(
     monitoring_router,
-    prefix=settings.API_V1_STR,
+    prefix=settings.API_V1_STR
 )
 app.include_router(
     stats_router,
@@ -111,7 +112,7 @@ app.include_router(settings_router, prefix=settings.API_V1_STR, dependencies=[De
 app.include_router(profile_type_router.router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
 
 # Admin tasks router (task queue management)
-app.include_router(admin_tasks.router, dependencies=[Depends(oauth2_scheme)])
+app.include_router(admin_tasks.router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
 
 # Admin export control router
 app.include_router(admin_export_control.router, dependencies=[Depends(oauth2_scheme)])
@@ -119,80 +120,11 @@ app.include_router(admin_export_control.router, dependencies=[Depends(oauth2_sch
 # Admin panel monitoring router
 app.include_router(admin_panel.router, dependencies=[Depends(oauth2_scheme)])
 
-
-# ============================================================================
-# Frontend Auth Endpoints (at root level for frontend compatibility)
-# ============================================================================
-
-from fastapi.security import OAuth2PasswordRequestForm
-from auth import security
-from core.hashing import verify_password
-from models.schemas import Token
-from models.user import User
-
-@app.post("/auth/login", response_model=Token, tags=["auth"])
-async def frontend_login(
-    response: Response,
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: AsyncSession = Depends(get_db_session),
-):
-    """Frontend login endpoint - at root level"""
-    from sqlalchemy.future import select
-    
-    # Find user by username or email
-    query = select(User).where(
-        (User.username == form_data.username) | (User.email == form_data.username)
-    )
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
-    # Check credentials
-    if (
-        not user
-        or not user.is_active
-        or not verify_password(form_data.password, user.hashed_password)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Create JWT token
-    access_token_expires = timedelta(days=7)
-    access_token = security.create_access_token(
-        data={"user_id": str(user.id), "scopes": [user.profile_type]},
-        expires_delta=access_token_expires,
-    )
-
-    # Set cookie
-    response.set_cookie(
-        "access_token",
-        value=f"Bearer {access_token}",
-        max_age=int(access_token_expires.total_seconds()),
-        path="/",
-        secure=False,
-        httponly=True,
-        samesite="lax",
-    )
-
-    return {"access_token": access_token, "token_type": "bearer"}
+# Profile Type Access router
+app.include_router(profile_type_access.router, prefix=settings.API_V1_STR, dependencies=[Depends(oauth2_scheme)])
 
 
-@app.get("/auth/me", tags=["auth"])
-async def frontend_get_me(
-    current_user: Annotated[User, Depends(security.get_current_user)]
-):
-    """Get current user info"""
-    from schemas.user import UserRead
-    return UserRead.from_orm(current_user)
-
-
-@app.post("/auth/logout", tags=["auth"])
-async def frontend_logout(response: Response):
-    """Logout endpoint"""
-    response.delete_cookie("access_token", path="/")
-    return {"detail": "Successfully logged out"}
+# Auth endpoints are now properly routed through auth_router at /api/v1/auth/
 
 
 @app.on_event("startup")
@@ -204,8 +136,8 @@ async def startup_event():
             result = await session.execute(text("SELECT 1"))
             logger.info("Database connection successful")
     except Exception as e:
-        logger.error(f"Failed to connect to database: {str(e)}")
-        raise
+        logger.warning(f"Database connection not available on startup: {str(e)}")
+        # Don't raise - allow app to start anyway
 async def detailed_health_check(db: AsyncSession = Depends(get_db_session)):
     """
     Performs a detailed health check on critical services.

@@ -94,3 +94,7 @@ class WorkerSettings(WorkerSettingsBase):
 
     class Config:
         from_attributes = True
+class WorkerSettingsResponse(WorkerSettings):
+    """Response schema for worker settings."""
+    class Config:
+        from_attributes = True

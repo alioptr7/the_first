@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
-import { Loader2, CheckCircle2, AlertCircle, Save } from "lucide-react";
+import { Loader2, CheckCircle2, Save } from "lucide-react";
 
 interface SettingsState {
   autoRefresh: boolean;
@@ -58,7 +58,14 @@ export default function SettingsPage() {
         console.error("Error loading settings:", e);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -101,7 +108,6 @@ export default function SettingsPage() {
   }
 
   if (!user) {
-    router.push("/login");
     return null;
   }
 

@@ -49,8 +49,7 @@ export default function CachePage() {
           stats: data,
           loading: false,
         }));
-      } catch (error) {
-        console.error("Error fetching cache stats:", error);
+      } catch {
         setState((prev) => ({
           ...prev,
           loading: false,
@@ -88,7 +87,7 @@ export default function CachePage() {
         };
         fetchStats();
       }, 1000);
-    } catch (error) {
+    } catch {
       setState((prev) => ({
         ...prev,
         actionLoading: false,
@@ -118,7 +117,7 @@ export default function CachePage() {
         };
         fetchStats();
       }, 1000);
-    } catch (error) {
+    } catch {
       setState((prev) => ({
         ...prev,
         actionLoading: false,
@@ -136,7 +135,7 @@ export default function CachePage() {
         stats: data,
         loading: false,
       }));
-    } catch (error) {
+    } catch {
       setState((prev) => ({
         ...prev,
         loading: false,

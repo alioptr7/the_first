@@ -15,6 +15,16 @@ from services.worker_settings import WorkerSettingsService
 
 router = APIRouter(prefix="/worker-settings", tags=["worker-settings"])
 
+@router.get("/", response_model=list[WorkerSettingsResponse])
+async def get_worker_settings(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+) -> list[WorkerSettingsResponse]:
+    """List all worker settings."""
+    service = WorkerSettingsService(db)
+    return await service.get_settings(skip=skip, limit=limit)
+
 @router.post("/test-connection", response_model=StorageTestResponse)
 async def test_connection(
     settings: Dict[str, Any],

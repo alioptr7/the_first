@@ -13,6 +13,10 @@ class WorkerSettingsService:
         self.db = db
         self._handlers: Dict[str, Any] = {}
     
+    async def get_settings(self, skip: int = 0, limit: int = 100) -> list[WorkerSettings]:
+        """Get all worker settings."""
+        return self.db.query(WorkerSettings).offset(skip).limit(limit).all()
+    
     def _get_handler(self, settings: WorkerSettings):
         """Get or create storage handler for settings."""
         settings_id = str(settings.id)

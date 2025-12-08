@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from pathlib import Path
+import os
 import asyncio
 
 from celery import shared_task
@@ -10,15 +11,12 @@ from core.config import settings
 from db.session import async_session
 from models.request import Request
 from schemas.request import RequestExport
-
-EXPORT_PATH = Path(settings.EXPORT_DIR) / "results"
+from services.export_storage import ExportStorageService
 
 @shared_task
 def export_completed_results():
     """Export completed request results to request network."""
     async def _export():
-        EXPORT_PATH.mkdir(parents=True, exist_ok=True)
-        
         async with async_session() as db:
             # Get completed requests that haven't been exported
             result = await db.execute(
@@ -28,35 +26,43 @@ def export_completed_results():
                     Request.exported_at.is_(None)
                 )
             )
-            completed_requests = result.scalars().all()
+            requests = result.scalars().all()
             
-            if not completed_requests:
-                return "No new results to export"
+            if not requests:
+                return {"status": "no_new_results", "count": 0}
             
             # Prepare export data
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            export_data = RequestExport(
-                requests=[req.to_export() for req in completed_requests],
-                exported_at=datetime.utcnow(),
-                version=1
-            )
+            export_data = {
+                "requests": [
+                    RequestExport(
+                        id=str(req.id),
+                        user_id=str(req.user_id),
+                        request_type=req.request_type,
+                        status=req.status,
+                        created_at=req.created_at,
+                        updated_at=req.updated_at,
+                        result=req.result
+                    ).model_dump()
+                    for req in requests
+                ],
+                "exported_at": datetime.utcnow().isoformat(),
+                "count": len(requests)
+            }
             
-            # Write to file
-            export_file = EXPORT_PATH / f"results_{timestamp}.json"
-            with open(export_file, "w", encoding="utf-8") as f:
-                json.dump(export_data.model_dump(), f, ensure_ascii=False, indent=2)
+            # Save using ExportStorageService
+            filename = f"results_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+            json_data = json.dumps(export_data, indent=2, default=str).encode('utf-8')
+            file_path = await ExportStorageService.save_export_file(filename, json_data)
             
-            # Write latest file
-            latest_file = EXPORT_PATH / "latest.json"
-            with open(latest_file, "w", encoding="utf-8") as f:
-                json.dump(export_data.model_dump(), f, ensure_ascii=False, indent=2)
-            
-            # Update exported_at timestamp
-            for request in completed_requests:
-                request.exported_at = datetime.utcnow()
-            
+            # Mark as exported
+            for req in requests:
+                req.exported_at = datetime.utcnow()
             await db.commit()
             
-            return f"Exported {len(completed_requests)} results to {export_file}"
+            return {
+                "status": "success",
+                "count": len(requests),
+                "file": file_path
+            }
     
     return asyncio.run(_export())

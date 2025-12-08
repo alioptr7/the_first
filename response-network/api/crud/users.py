@@ -32,8 +32,10 @@ async def get_users_with_stats(
     
     for user in users:
         stats = await get_user_stats(db, user.id)
+        # Filter out SQLAlchemy internal state
+        user_data = {k: v for k, v in user.__dict__.items() if not k.startswith('_')}
         user_dict = {
-            **user.__dict__,
+            **user_data,
             'stats': stats
         }
         result.append(user_dict)
@@ -50,8 +52,10 @@ async def get_user_with_stats(db: AsyncSession, user_id: str) -> Optional[Dict]:
         return None
     
     stats = await get_user_stats(db, user_id)
+    # Filter out SQLAlchemy internal state
+    user_data = {k: v for k, v in user.__dict__.items() if not k.startswith('_')}
     return {
-        **user.__dict__,
+        **user_data,
         'stats': stats
     }
 

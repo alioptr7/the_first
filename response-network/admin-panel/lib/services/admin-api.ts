@@ -1,0 +1,621 @@
+import api from "@/app/(auth)/api";
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: "admin" | "user";
+  profile_type?: string;
+  is_active: boolean;
+  is_superuser?: boolean;
+  full_name?: string;
+  created_at: string;
+  last_login: string | null;
+}
+
+export interface UserRequestAccess {
+  user_id: string;
+  request_type_id: string;
+  max_requests_per_hour: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ProfileType {
+  name: string;
+  display_name: string;
+  description: string | null;
+  daily_request_limit: number;
+  monthly_request_limit: number;
+  max_results_per_request: number;
+  is_active: boolean;
+  is_builtin: boolean;
+}
+
+export interface ExportStatus {
+  task_id: string;
+  state: string;
+  result?: unknown;
+  error?: string;
+}
+
+export interface HealthStatus {
+  status: "ok" | "warning" | "error";
+  services: {
+    database: string;
+    redis: string;
+  };
+}
+
+export interface SystemStats {
+  users: {
+    total: number;
+    active: number;
+  };
+  requests: {
+    total: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  };
+  database: {
+    size: string;
+  };
+  results: {
+    total: number;
+  };
+}
+
+export interface CacheStats {
+  keys: number;
+  memory_usage: string;
+  keyspace_hits: number;
+  keyspace_misses: number;
+  hit_ratio: string;
+  clients: {
+    connected_clients: number;
+  };
+}
+
+export interface Request {
+  id: string;
+  user_id: string;
+  request_type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  created_at: string;
+  updated_at: string;
+  result?: string;
+}
+
+export interface RequestType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  is_public: boolean;
+  version: string;
+  max_items_per_request: number;
+  available_indices: string[];
+  elasticsearch_query_template: Record<string, unknown> | null;
+  parameters?: Array<{
+    name: string;
+    description?: string;
+    parameter_type: string;
+    is_required: boolean;
+    validation_rules?: string;
+    placeholder_key?: string;
+  }>;
+  created_at: string;
+  created_by_id: string;
+}
+
+export interface ProfileTypeAccess {
+  id: string;
+  profile_type_id: string;
+  request_type_id: string;
+  profile_type_name?: string;
+  max_requests_per_day: number | null;
+  max_requests_per_month: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================================
+// Health Service
+// ============================================================================
+
+export const healthService = {
+  async getHealth(): Promise<HealthStatus> {
+    const response = await api.get("/api/v1/system/health");
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Stats Service
+// ============================================================================
+
+export const statsService = {
+  async getSystemStats(): Promise<SystemStats> {
+    const response = await api.get("/api/v1/monitoring/stats");
+    return response.data;
+  },
+
+  async getCacheStats(): Promise<CacheStats> {
+    const response = await api.get("/api/v1/monitoring/cache-stats");
+    return response.data;
+  },
+
+  async getRequestStats() {
+    const response = await api.get("/api/v1/monitoring/request-stats");
+    return response.data;
+  },
+};
+
+// ============================================================================
+// User Service
+// ============================================================================
+
+export const userService = {
+  async getUsers(): Promise<User[]> {
+    const response = await api.get("/api/v1/users");
+    const users = Array.isArray(response.data) ? response.data : response.data.users || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return users.map((u: any) => ({
+      ...u,
+      role: u.role || (u.profile_type === 'admin' ? 'admin' : 'user')
+    }));
+  },
+
+  async getUserById(id: string): Promise<User> {
+    const response = await api.get(`/api/v1/users/${id}`);
+    const user = response.data;
+    return {
+      ...user,
+      role: user.role || (user.profile_type === 'admin' ? 'admin' : 'user')
+    };
+  },
+
+
+  async createUser(data: unknown): Promise<User> {
+    const response = await api.post("/api/v1/users", data);
+    return response.data;
+  },
+
+  async updateUser(id: string, data: unknown): Promise<User> {
+    const response = await api.put(`/api/v1/users/${id}`, data);
+    return response.data;
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    await api.delete(`/api/v1/users/${id}`);
+  },
+
+
+  async activateUser(id: string): Promise<unknown> {
+    const response = await api.post(`/api/v1/users/${id}/activate`);
+    return response.data;
+  },
+
+  async deactivateUser(id: string): Promise<unknown> {
+    const response = await api.post(`/api/v1/users/${id}/suspend`);
+    return response.data;
+  },
+
+  // Request Access Management
+  async getUserRequestAccess(userId: string): Promise<UserRequestAccess[]> {
+    const response = await api.get(`/api/v1/users/${userId}/request-access`);
+    return response.data;
+  },
+
+  async grantRequestAccess(userId: string, data: Array<{ request_type_id: string; max_requests_per_hour: number; is_active: boolean }>): Promise<UserRequestAccess[]> {
+    const response = await api.post(`/api/v1/users/${userId}/request-access`, data);
+    return response.data;
+  },
+
+  async revokeRequestAccess(userId: string, requestTypeId: string): Promise<void> {
+    await api.delete(`/api/v1/users/${userId}/request-access/${requestTypeId}`);
+  },
+
+  // Password Management
+  async resetPassword(userId: string, newPassword: string): Promise<unknown> {
+    const response = await api.post(`/api/v1/users/${userId}/reset-password`, { new_password: newPassword });
+    return response.data;
+  },
+
+  async changePassword(data: { current_password: string; new_password: string }): Promise<unknown> {
+    const response = await api.post("/api/v1/users/change-password", data);
+    return response.data;
+  },
+
+  // Export
+  async exportUsers(): Promise<{ task_id: string; status: string; message: string }> {
+    const response = await api.post("/api/v1/users/export/now");
+    return response.data;
+  },
+
+  async getExportStatus(taskId: string): Promise<ExportStatus> {
+    const response = await api.get(`/api/v1/users/export/status/${taskId}`);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Profile Type Service
+// ============================================================================
+
+export const profileTypeService = {
+  async getProfileTypes(): Promise<ProfileType[]> {
+    const response = await api.get("/api/v1/profile-types");
+    return response.data;
+  },
+
+  async getProfileType(name: string): Promise<ProfileType> {
+    const response = await api.get(`/api/v1/profile-types/${name}`);
+    return response.data;
+  },
+
+  async createProfileType(data: unknown): Promise<ProfileType> {
+    const response = await api.post("/api/v1/profile-types", data);
+    return response.data;
+  },
+
+  async updateProfileType(name: string, data: unknown): Promise<ProfileType> {
+    const response = await api.put(`/api/v1/profile-types/${name}`, data);
+    return response.data;
+  },
+
+  async deleteProfileType(name: string): Promise<void> {
+    const response = await api.delete(`/api/v1/profile-types/${name}`);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Request Service
+// ============================================================================
+
+export const requestService = {
+  async getRecentRequests(limit: number = 10): Promise<Request[]> {
+    const response = await api.get(`/api/v1/requests?limit=${limit}`);
+    return response.data.requests || [];
+  },
+
+  async getRequestById(id: string): Promise<Request> {
+    const response = await api.get(`/api/v1/requests/${id}`);
+    return response.data;
+  },
+
+  async getRequestsByStatus(
+    status: "pending" | "processing" | "completed" | "failed"
+  ): Promise<Request[]> {
+    const response = await api.get(`/api/v1/requests?status=${status}`);
+    return response.data.requests || [];
+  },
+
+  async createRequest(data: {
+    request_type: string;
+    payload?: Record<string, unknown>;
+  }): Promise<Request> {
+    const response = await api.post("/api/v1/requests", data);
+    return response.data;
+  },
+
+  async cancelRequest(id: string): Promise<void> {
+    await api.post(`/api/v1/requests/${id}/cancel`);
+  },
+
+  async retryRequest(id: string): Promise<Request> {
+    const response = await api.post(`/api/v1/requests/${id}/retry`);
+    return response.data;
+  },
+
+  async getRequestTypes(): Promise<RequestType[]> {
+    const response = await api.get("/api/v1/request-types/");
+    return response.data;
+  },
+
+  async getRequestType(id: string): Promise<RequestType> {
+    const response = await api.get(`/api/v1/request-types/${id}`);
+    return response.data;
+  },
+
+  async createRequestType(data: { name: string; description?: string; is_active?: boolean }): Promise<RequestType> {
+    const response = await api.post("/api/v1/request-types/", data);
+    return response.data;
+  },
+
+  async updateRequestType(id: string, data: unknown): Promise<RequestType> {
+    const response = await api.put(`/api/v1/request-types/${id}`, data);
+    return response.data;
+  },
+
+  async configureRequestTypeParams(id: string, data: unknown): Promise<RequestType> {
+    const response = await api.put(`/api/v1/request-types/${id}/configure`, data);
+    return response.data;
+  },
+
+  async configureRequestTypeQuery(id: string, data: { elasticsearch_query_template: string }): Promise<RequestType> {
+    const response = await api.put(`/api/v1/request-types/${id}/query`, data);
+    return response.data;
+  },
+
+  async deleteRequestType(id: string): Promise<void> {
+    await api.delete(`/api/v1/request-types/${id}`);
+  },
+
+  async getRequestTypeAccess(id: string): Promise<Array<{
+    user_id: string;
+    username: string;
+    email: string;
+    max_requests_per_hour: number;
+    is_active: boolean;
+  }>> {
+    const response = await api.get(`/api/v1/request-types/${id}/access`);
+    return response.data;
+  },
+
+  // Request Type Access Management
+  async grantRequestTypeAccess(requestTypeId: string, data: { user_ids: string[]; max_requests_per_hour: number; is_active: boolean }): Promise<UserRequestAccess[]> {
+    const response = await api.post(`/api/v1/request-types/${requestTypeId}/access`, data);
+    return response.data;
+  },
+
+  async listRequestTypeAccess(requestTypeId: string): Promise<UserRequestAccess[]> {
+    const response = await api.get(`/api/v1/request-types/${requestTypeId}/access`);
+    return response.data;
+  },
+
+  async revokeRequestTypeAccess(requestTypeId: string, userId: string): Promise<void> {
+    await api.delete(`/api/v1/request-types/${requestTypeId}/access/${userId}`);
+  },
+
+  // Profile Type Access Management
+  async getProfileTypeAccess(requestTypeId: string): Promise<ProfileTypeAccess[]> {
+    const response = await api.get(`/api/v1/request-types/${requestTypeId}/profile-access`);
+    return response.data;
+  },
+
+  async grantProfileTypeAccess(
+    requestTypeId: string,
+    data: { profile_type_ids: string[]; max_requests_per_day?: number; max_requests_per_month?: number; is_active: boolean }
+  ): Promise<ProfileTypeAccess[]> {
+    const response = await api.post(`/api/v1/request-types/${requestTypeId}/profile-access`, data);
+    return response.data;
+  },
+
+  async updateProfileTypeAccess(
+    requestTypeId: string,
+    profileTypeId: string,
+    data: { max_requests_per_day?: number; max_requests_per_month?: number; is_active?: boolean }
+  ): Promise<ProfileTypeAccess> {
+    const response = await api.put(`/api/v1/request-types/${requestTypeId}/profile-access/${profileTypeId}`, data);
+    return response.data;
+  },
+
+  async revokeProfileTypeAccess(requestTypeId: string, profileTypeId: string): Promise<void> {
+    await api.delete(`/api/v1/request-types/${requestTypeId}/profile-access/${profileTypeId}`);
+  },
+};
+
+// ============================================================================
+// Cache Service
+// ============================================================================
+
+export const cacheService = {
+  async clearCache(): Promise<void> {
+    await api.post("/api/v1/monitoring/cache/clear");
+  },
+
+  async clearCacheByKey(key: string): Promise<void> {
+    await api.post(`/api/v1/monitoring/cache/clear/${key}`);
+  },
+
+  async getCacheKeys(): Promise<string[]> {
+    const response = await api.get("/api/v1/monitoring/cache/keys");
+    return response.data.keys || [];
+  },
+};
+
+// ============================================================================
+// Settings Service
+// ============================================================================
+
+export const settingsService = {
+  async getSettings() {
+    const response = await api.get("/api/v1/settings");
+    return response.data;
+  },
+
+  async updateSettings(data: Record<string, unknown>) {
+    const response = await api.put("/api/v1/settings", data);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Monitoring Service
+// ============================================================================
+
+export const monitoringService = {
+  async getMetrics() {
+    const response = await api.get("/api/v1/monitoring/metrics");
+    return response.data;
+  },
+
+  async getLogsStats() {
+    const response = await api.get("/api/v1/monitoring/logs-stats");
+    return response.data;
+  },
+
+  async getSystemHealth() {
+    const response = await api.get("/api/v1/monitoring/system-health");
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Worker Settings Service
+// ============================================================================
+
+export interface WorkerSettings {
+  id: string;
+  name: string;
+  worker_type: string;
+  is_active: boolean;
+  storage_config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export const workerService = {
+  async getWorkerSettings(): Promise<WorkerSettings[]> {
+    const response = await api.get("/api/v1/worker-settings/");
+    return response.data;
+  },
+
+  async getWorkerSetting(id: string): Promise<WorkerSettings> {
+    const response = await api.get(`/api/v1/worker-settings/${id}`);
+    return response.data;
+  },
+
+  async createWorkerSettings(data: any): Promise<WorkerSettings> {
+    const response = await api.post("/api/v1/worker-settings/", data);
+    return response.data;
+  },
+
+  async updateWorkerSettings(id: string, data: unknown): Promise<WorkerSettings> {
+    const response = await api.put(`/api/v1/worker-settings/${id}`, data);
+    return response.data;
+  },
+
+  async deleteWorkerSettings(id: string): Promise<void> {
+    await api.delete(`/api/v1/api/v1/worker-settings/${id}`);
+  },
+
+  async toggleWorker(id: string): Promise<WorkerSettings> {
+    const response = await api.post(`/api/v1/api/v1/worker-settings/${id}/toggle`);
+    return response.data;
+  },
+
+  async testStorageConnection(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post(`/api/v1/api/v1/worker-settings/${id}/test-connection`);
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Admin Tasks Service
+// ============================================================================
+
+export interface QueueStats {
+  default_queue_length: number;
+  notes: string;
+}
+
+export interface WorkersStats {
+  active_workers: string[];
+  count: number;
+  status?: string;
+}
+
+export interface PendingTask {
+  id: string;
+  name: string;
+  args: unknown[];
+  kwargs: Record<string, unknown>;
+  created_at: string;
+}
+
+export const adminTasksService = {
+  async getQueueStats(): Promise<QueueStats> {
+    const response = await api.get("/api/v1/admin/tasks/queue/stats");
+    return response.data;
+  },
+
+  async getWorkersStats(): Promise<WorkersStats> {
+    const response = await api.get("/api/v1/admin/tasks/workers/stats");
+    return response.data;
+  },
+
+  async getPendingTasks(): Promise<PendingTask[]> {
+    const response = await api.get("/api/v1/admin/tasks/queue/pending");
+    return response.data;
+  },
+
+  async skipTask(taskId: string): Promise<void> {
+    await api.post(`/api/v1/admin/tasks/tasks/${taskId}/skip`);
+  },
+
+  async clearQueue(): Promise<void> {
+    await api.delete("/api/v1/admin/tasks/queue/clear");
+  },
+
+  async retryTask(taskId: string): Promise<void> {
+    await api.post(`/api/v1/admin/tasks/tasks/${taskId}/retry`);
+  },
+};
+
+// ============================================================================
+// Export Config Service
+// ============================================================================
+
+export interface ExportConfig {
+  enabled: boolean;
+  format: string;
+  destination: string;
+  schedule?: string;
+
+  // Destination configuration
+  destination_type: 'local' | 'ftp';
+  local_path?: string;
+  ftp_host?: string;
+  ftp_port?: number;
+  ftp_username?: string;
+  ftp_password?: string;
+  ftp_path?: string;
+  ftp_use_tls?: boolean;
+}
+
+export const exportConfigService = {
+  async getExportConfig(): Promise<ExportConfig> {
+    const response = await api.get("/api/v1/admin/exports/config");
+    return response.data;
+  },
+
+  async updateExportConfig(data: Partial<ExportConfig>): Promise<ExportConfig> {
+    const response = await api.post("/api/v1/admin/exports/config", data);
+    return response.data;
+  },
+
+  async testExports(): Promise<{ success: boolean; message: string }> {
+    const response = await api.post("/api/v1/admin/exports/test");
+    return response.data;
+  },
+
+  async getExportStatus(): Promise<{ status: string; last_export?: string }> {
+    const response = await api.get("/api/v1/admin/exports/status");
+    return response.data;
+  },
+};
+
+const adminApi = {
+  healthService,
+  statsService,
+  userService,
+  requestService,
+  cacheService,
+  settingsService,
+  monitoringService,
+  profileTypeService,
+  workerService,
+  adminTasksService,
+  exportConfigService,
+};
+
+export default adminApi;

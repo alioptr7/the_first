@@ -11,7 +11,7 @@ from workers.celery_app import celery_app
 import redis
 
 router = APIRouter(
-    prefix="/api/v1/admin/tasks",
+    prefix="/admin/tasks",
     tags=["admin-tasks"],
     dependencies=[Depends(get_current_user)]
 )
@@ -23,8 +23,11 @@ inspect = celery_app.control.inspect()
 
 async def check_admin(user: User = Depends(get_current_user)):
     """بررسی کنید که user admin است"""
-    if not user or user.role != "admin":
-        raise ForbiddenException(detail="تنها ادمین‌ها می‌توانند queue را مدیریت کنند")
+    if not user or user.profile_type != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="تنها ادمین‌ها می‌توانند queue را مدیریت کنند"
+        )
     return user
 
 
@@ -93,12 +96,20 @@ async def get_workers_stats(admin: User = Depends(check_admin)):
                 active = inspect.active()
                 active_count = len(active.get(worker_name, [])) if active else 0
                 
+                # Calculate total processed tasks
+                total_info = worker_info.get('total', {})
+                if isinstance(total_info, dict):
+                    # Sum all task counts from the total dict
+                    processed_count = sum(total_info.values()) if total_info else 0
+                else:
+                    processed_count = 0
+                
                 worker_list.append(WorkerStats(
                     worker_name=worker_name,
-                    pool_type=pool_info.get('implementation', 'unknown'),
+                    pool_type=pool_info.get('implementation', 'prefork'),
                     max_concurrency=pool_info.get('max-concurrency', 0),
                     active_tasks=active_count,
-                    processed_tasks=worker_info.get('total', 0),
+                    processed_tasks=processed_count,
                     offline=False
                 ))
         

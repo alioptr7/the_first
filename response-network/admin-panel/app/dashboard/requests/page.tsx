@@ -48,7 +48,7 @@ export default function RequestsPage() {
         const data = await requestService.getRecentRequests();
         setState((prev) => ({
           ...prev,
-          requests: data.requests,
+          requests: data,
           loading: false,
         }));
       } catch (error) {
@@ -82,10 +82,10 @@ export default function RequestsPage() {
       const data = await requestService.getRecentRequests();
       setState((prev) => ({
         ...prev,
-        requests: data.requests,
+        requests: Array.isArray(data) ? data : (data.requests || []),
         loading: false,
       }));
-    } catch (error) {
+    } catch {
       setState((prev) => ({
         ...prev,
         loading: false,
@@ -320,19 +320,9 @@ export default function RequestsPage() {
                             })}
                           </TableCell>
                           <TableCell>
-                            <div className="w-32">
-                              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded">
-                                <div
-                                  className="h-2 bg-blue-500 rounded"
-                                  style={{
-                                    width: `${(request.progress || 0) * 100}%`,
-                                  }}
-                                />
-                              </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                {Math.round((request.progress || 0) * 100)}%
-                              </p>
-                            </div>
+                            <span className="text-xs text-gray-500">
+                              {new Date(request.created_at).toLocaleDateString("fa-IR")}
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))

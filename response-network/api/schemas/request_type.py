@@ -42,6 +42,7 @@ class RequestTypeBase(BaseModel):
 class RequestTypeCreateInitial(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
+    is_active: bool = True
 
 
 # Step 2: Configure parameters and limits

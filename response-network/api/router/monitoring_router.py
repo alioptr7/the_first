@@ -35,15 +35,69 @@ async def get_system_health(current_user: User = Depends(get_current_user)):
         }
     }
 
-@router.get("/stats", response_model=SystemStats)
-async def get_system_stats():
-    """Get current system statistics."""
+@router.get("/stats")
+async def get_system_stats(db: Session = Depends(get_db)):
+    """Get current system statistics from database."""
+    from sqlalchemy import select, func
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from models.user import User
+    from models.request import Request
+    
+    # Convert to async session if needed
+    if not isinstance(db, AsyncSession):
+        # If sync session, return mock data for now
+        return {
+            "users": {"total": 0, "active": 0},
+            "requests": {"total": 0, "processing": 0, "completed": 0, "failed": 0},
+            "database": {"size": "0 MB"},
+            "results": {"total": 0}
+        }
+    
+    # Count total users
+    total_users_query = select(func.count()).select_from(User)
+    total_users_result = await db.execute(total_users_query)
+    total_users = total_users_result.scalar() or 0
+    
+    # Count active users
+    active_users_query = select(func.count()).select_from(User).where(User.is_active == True)
+    active_users_result = await db.execute(active_users_query)
+    active_users = active_users_result.scalar() or 0
+    
+    # Count total requests
+    total_requests_query = select(func.count()).select_from(Request)
+    total_requests_result = await db.execute(total_requests_query)
+    total_requests = total_requests_result.scalar() or 0
+    
+    # Count requests by status
+    processing_query = select(func.count()).select_from(Request).where(Request.status == "processing")
+    processing_result = await db.execute(processing_query)
+    processing_requests = processing_result.scalar() or 0
+    
+    completed_query = select(func.count()).select_from(Request).where(Request.status == "completed")
+    completed_result = await db.execute(completed_query)
+    completed_requests = completed_result.scalar() or 0
+    
+    failed_query = select(func.count()).select_from(Request).where(Request.status == "failed")
+    failed_result = await db.execute(failed_query)
+    failed_requests = failed_result.scalar() or 0
+    
     return {
-        "cpu_usage": 22.7,
-        "memory_usage": 87.6,
-        "disk_usage": 94.5,
-        "requests_per_minute": 0.0,
-        "avg_response_time": 0.0
+        "users": {
+            "total": total_users,
+            "active": active_users
+        },
+        "requests": {
+            "total": total_requests,
+            "processing": processing_requests,
+            "completed": completed_requests,
+            "failed": failed_requests
+        },
+        "database": {
+            "size": "N/A"
+        },
+        "results": {
+            "total": completed_requests
+        }
     }
 
 @router.get("/requests", response_model=RequestStats)
@@ -98,3 +152,46 @@ async def get_system_logs(
         limit=limit,
         offset=offset
     )
+
+@router.get("/cache-stats")
+async def get_cache_stats():
+    """Get Redis cache statistics including memory usage and hit/miss ratio."""
+    import redis
+    import logging
+    from core.config import settings
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"Attempting to connect to Redis at: {settings.REDIS_URL}")
+        # Use decode_responses=True to get strings instead of bytes
+        redis_client = redis.from_url(str(settings.REDIS_URL), decode_responses=True, socket_connect_timeout=5)
+        
+        # Test connection
+        redis_client.ping()
+        
+        info = redis_client.info()
+
+        hits = int(info.get("keyspace_hits", 0))
+        misses = int(info.get("keyspace_misses", 0))
+        total_lookups = hits + misses
+
+        cache_metrics = {
+            "keys": redis_client.dbsize(),
+            "memory_usage": info.get("used_memory_human"),
+            "keyspace_hits": hits,
+            "keyspace_misses": misses,
+            "hit_ratio": f"{(hits / total_lookups * 100):.2f}%" if total_lookups > 0 else "N/A",
+            "clients": {
+                "connected_clients": info.get("connected_clients"),
+            },
+        }
+
+        return cache_metrics
+
+    except redis.exceptions.ConnectionError as e:
+        logger.error(f"Redis connection error: {e}")
+        raise HTTPException(status_code=503, detail=f"Could not connect to Redis: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error in cache-stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting cache stats: {str(e)}")

@@ -10,14 +10,14 @@ from models.schemas import UserCreate, UserUpdate, User, UserWithStats
 from models.user import User as UserModel
 from models.request_type import RequestType
 from models.request_access import UserRequestAccess
-from auth.dependencies import get_current_admin_user
+from auth.dependencies import get_current_admin_user, get_current_user
 from crud import users as user_service
 from schemas.request_access import UserRequestAccessCreate, UserRequestAccessRead
 from workers.celery_app import celery_app
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("", response_model=List[UserWithStats])
+@router.get("", response_model=List[dict])
 async def list_users(
     profile_type: Optional[str] = Query(None, enum=['admin', 'user', 'viewer']),
     is_active: Optional[bool] = Query(None),
@@ -38,10 +38,10 @@ async def list_users(
         limit=limit
     )
 
-@router.get("/me", response_model=UserWithStats)
-async def get_current_user(
+@router.get("/me", response_model=dict)
+async def get_current_user_info(
     db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_admin_user)
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Get detailed information about the currently authenticated user including their request statistics.

@@ -7,12 +7,10 @@ from redis.asyncio import Redis
 from contextlib import asynccontextmanager
 
 
-@asynccontextmanager
-async def get_db() -> AsyncSession:
-    """Get async database session as an async context manager.
-
-    This supports usage as `async with get_db() as db:` in Celery tasks
-    and as a FastAPI dependency via `Depends(get_db)`.
+async def get_db():
+    """Get async database session for FastAPI dependency injection.
+    
+    This is used as a FastAPI dependency via `Depends(get_db)`.
     """
     async with async_session() as session:
         try:

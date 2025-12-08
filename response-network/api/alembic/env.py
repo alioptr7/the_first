@@ -39,13 +39,14 @@ target_metadata = Base.metadata
 
 def get_database_url():
     """Build database URL from environment variables."""
-    user = os.getenv("RESPONSE_DB_USER", "respuser")
-    password = os.getenv("RESPONSE_DB_PASSWORD", "resppassword123")
-    host = os.getenv("RESPONSE_DB_HOST", "localhost")
-    port = os.getenv("RESPONSE_DB_PORT", "5433")
-    db_name = os.getenv("RESPONSE_DB_NAME", "response_network_db")
-    # Use psycopg2 (sync) for Alembic migrations
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "postgres")
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "response_network")
+    # Use psycopg (sync) for Alembic migrations
     return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
+
 
 
 def run_migrations_offline() -> None:

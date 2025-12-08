@@ -2,7 +2,7 @@
 Export Configuration Schemas
 """
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class ExportConfigUpdate(BaseModel):
@@ -19,6 +19,16 @@ class ExportConfigUpdate(BaseModel):
     profile_types_filter_by_is_active: bool = Field(default=True, description="Only export active ProfileTypes")
     
     export_interval_seconds: int = Field(default=60, ge=10, le=3600, description="Export interval in seconds")
+    
+    # Destination configuration
+    destination_type: Optional[str] = Field(None, description="Destination type: local or ftp")
+    local_path: Optional[str] = Field(None, description="Local file system path")
+    ftp_host: Optional[str] = Field(None, description="FTP server hostname")
+    ftp_port: Optional[int] = Field(None, description="FTP server port")
+    ftp_username: Optional[str] = Field(None, description="FTP username")
+    ftp_password: Optional[str] = Field(None, description="FTP password")
+    ftp_path: Optional[str] = Field(None, description="FTP remote path")
+    ftp_use_tls: Optional[bool] = Field(None, description="Use TLS/SSL for FTP")
 
 
 class ExportConfigResponse(BaseModel):
@@ -36,6 +46,16 @@ class ExportConfigResponse(BaseModel):
     
     export_interval_seconds: int
     message: str = ""
+    
+    # Destination configuration
+    destination_type: str = Field(description="Destination type: local or ftp")
+    local_path: Optional[str] = Field(None, description="Local file system path")
+    ftp_host: Optional[str] = Field(None, description="FTP server hostname")
+    ftp_port: Optional[int] = Field(None, description="FTP server port")
+    ftp_username: Optional[str] = Field(None, description="FTP username (masked)")
+    ftp_password: Optional[str] = Field(None, description="FTP password (masked)")
+    ftp_path: Optional[str] = Field(None, description="FTP remote path")
+    ftp_use_tls: Optional[bool] = Field(None, description="Use TLS/SSL for FTP")
 
 
 class ExportStatusResponse(BaseModel):

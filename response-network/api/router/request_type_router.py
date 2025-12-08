@@ -35,16 +35,6 @@ async def create_request_type_initial(
     Only admin users can create request types.
     """
     # Check if request type with same name exists
-    existing = await session.execute(
-        select(RequestType).where(RequestType.name == data.name)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Request type with name '{data.name}' already exists"
-        )
-    
-    # Check if request type with same name exists
     existing = await db.execute(
         select(RequestType).where(RequestType.name == data.name)
     )
@@ -58,11 +48,12 @@ async def create_request_type_initial(
     db_obj = RequestType(
         name=data.name,
         description=data.description,
+        is_active=data.is_active,
         created_by_id=current_user.id
     )
     db.add(db_obj)
     await db.commit()
-    await db.refresh(db_obj)
+    await db.refresh(db_obj, ["parameters"])
     
     return db_obj
 
@@ -237,11 +228,13 @@ async def revoke_user_access(
 @router.get("/", response_model=List[RequestTypeRead])
 async def list_request_types(
     include_inactive: bool = False,
+    skip: int = 0,
+    limit: int = 100,
     current_user: User = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
     """List all request types. Only admin users can list all request types."""
-    query = select(RequestType)
+    query = select(RequestType).options(selectinload(RequestType.parameters))
     if not include_inactive:
         query = query.where(RequestType.is_active == True)
     
