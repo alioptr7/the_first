@@ -5,15 +5,31 @@ from datetime import datetime
 import json
 from pathlib import Path
 import hashlib
+import os
+from dotenv import load_dotenv
 
 from celery import shared_task
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
-from core.config import settings
-from core.dependencies import get_db_sync
+# Load .env
+load_dotenv()
+
+# Import User model
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.user import User as UserModel
+# Import all models to resolve dependencies
+from models.request import Request  # noqa
+from models.response import Response  # noqa
+from models.batch import ExportBatch, ImportBatch  # noqa
+try:
+    from models.api_key import ApiKey  # noqa
+except ImportError:
+    pass
 
-IMPORT_PATH = Path(settings.IMPORT_DIR) / "users"
+# Use shared_data directory directly
+IMPORT_PATH = Path("/home/docker/the_first/the_first/shared_data/users")
 PROCESSED_FILE = IMPORT_PATH / ".processed_users"
 
 
@@ -70,7 +86,20 @@ def import_users_from_response_network(self):
             data = json.load(f)
 
         users_list = data.get("users", [])
-        db = next(get_db_sync())
+        
+        # Build database URL from env
+        db_user = os.getenv("REQUEST_DB_USER", "postgres")
+        db_pass = os.getenv("REQUEST_DB_PASSWORD", "postgres")
+        db_host = os.getenv("REQUEST_DB_HOST", "127.0.0.1")
+        db_port = os.getenv("REQUEST_DB_PORT", "5433")
+        db_name = os.getenv("REQUEST_DB_NAME", "request_network")
+        
+        database_url = f"postgresql+psycopg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+        
+        # Create sync engine and session
+        engine = create_engine(database_url)
+        Session = sessionmaker(bind=engine)
+        db = Session()
 
         try:
             imported_count = 0
@@ -89,8 +118,17 @@ def import_users_from_response_network(self):
                     existing_user.username = user_data.get("username")
                     existing_user.email = user_data.get("email")
                     existing_user.hashed_password = user_data.get("hashed_password")
+                    existing_user.full_name = user_data.get("full_name")
                     existing_user.is_active = user_data.get("is_active", True)
-                    existing_user.profile_type = user_data.get("role", "user")
+                    existing_user.profile_type = user_data.get("profile_type", "user")
+                    existing_user.allowed_request_types = user_data.get("allowed_request_types", [])
+                    existing_user.blocked_request_types = user_data.get("blocked_request_types", [])
+                    existing_user.rate_limit_per_minute = user_data.get("rate_limit_per_minute", 200)
+                    existing_user.rate_limit_per_hour = user_data.get("rate_limit_per_hour", 1000)
+                    existing_user.rate_limit_per_day = user_data.get("rate_limit_per_day", 5000)
+                    existing_user.daily_request_limit = user_data.get("daily_request_limit", 1000)
+                    existing_user.monthly_request_limit = user_data.get("monthly_request_limit", 10000)
+                    existing_user.priority = user_data.get("priority", 5)
                     updated_count += 1
                 else:
                     # Create new user
@@ -99,8 +137,17 @@ def import_users_from_response_network(self):
                         username=user_data.get("username"),
                         email=user_data.get("email"),
                         hashed_password=user_data.get("hashed_password"),
+                        full_name=user_data.get("full_name"),
                         is_active=user_data.get("is_active", True),
-                        profile_type=user_data.get("role", "user")
+                        profile_type=user_data.get("profile_type", "user"),
+                        allowed_request_types=user_data.get("allowed_request_types", []),
+                        blocked_request_types=user_data.get("blocked_request_types", []),
+                        rate_limit_per_minute=user_data.get("rate_limit_per_minute", 200),
+                        rate_limit_per_hour=user_data.get("rate_limit_per_hour", 1000),
+                        rate_limit_per_day=user_data.get("rate_limit_per_day", 5000),
+                        daily_request_limit=user_data.get("daily_request_limit", 1000),
+                        monthly_request_limit=user_data.get("monthly_request_limit", 10000),
+                        priority=user_data.get("priority", 5)
                     )
                     db.add(new_user)
                     imported_count += 1

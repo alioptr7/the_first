@@ -5,20 +5,14 @@ from pydantic import BaseModel, Field, ConfigDict
 from .response import ResponsePublic
 
 
-class FieldRequest(BaseModel):
-    """
-    Schema for specific fields in a service request.
-    """
-    msisdn: str = Field(..., description="Phone number in international format")
-    fromTime: str = Field(..., description="Start date/time of the request period")
-    toTime: str = Field(..., description="End date/time of the request period")
+from typing import Dict, Any
 
 class RequestDetail(BaseModel):
     """
     Schema for service request details.
     """
     serviceName: str = Field(..., description="Name of the service to query")
-    fieldRequest: FieldRequest = Field(..., description="Specific fields for the request")
+    fieldRequest: Dict[str, Any] = Field(..., description="Specific fields for the request")
 
 class RequestCreate(BaseModel):
     """

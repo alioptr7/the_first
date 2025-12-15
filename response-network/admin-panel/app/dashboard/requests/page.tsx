@@ -29,9 +29,19 @@ interface RequestsState {
   statusFilter: "all" | "pending" | "processing" | "completed" | "failed";
 }
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
+
 export default function RequestsPage() {
   const router = useRouter();
   const { user: currentUser, isLoading: authLoading } = useAuthStore();
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [state, setState] = useState<RequestsState>({
     requests: [],
     loading: true,
@@ -285,7 +295,7 @@ export default function RequestsPage() {
                       <TableHead>وضعیت</TableHead>
                       <TableHead>تاریخ ایجاد</TableHead>
                       <TableHead>آخرین به‌روز رسانی</TableHead>
-                      <TableHead>پیش‌رفت</TableHead>
+                      <TableHead>عملیات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -295,7 +305,12 @@ export default function RequestsPage() {
                           <TableCell className="font-mono text-sm">
                             {request.id.substring(0, 8)}...
                           </TableCell>
-                          <TableCell>{request.user_id.substring(0, 8)}...</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{request.username || "Unknown"}</span>
+                              <span className="text-xs text-gray-400">{request.user_id.substring(0, 8)}...</span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={getStatusBadgeVariant(request.status)}>
                               {getStatusLabel(request.status)}
@@ -320,9 +335,14 @@ export default function RequestsPage() {
                             })}
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs text-gray-500">
-                              {new Date(request.created_at).toLocaleDateString("fa-IR")}
-                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              <Eye className="h-4 w-4 ml-1" />
+                              مشاهده
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -342,6 +362,81 @@ export default function RequestsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Details Dialog */}
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>جزئیات درخواست {selectedRequest?.id.substring(0, 8)}</DialogTitle>
+            <DialogDescription>
+              اطلاعات کامل درخواست و پاسخ سیستم
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 mt-4 overflow-y-auto">
+            <div className="space-y-6 p-1">
+              {/* User & ID Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-500">درخواست کننده</span>
+                    <span className="font-bold">{selectedRequest?.username || "Unknown"}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-500">شناسه کاربر</span>
+                    <span className="font-mono text-xs text-gray-400">{selectedRequest?.user_id}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-1 text-gray-500">نوع کوئری</h4>
+                  <p className="text-sm font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                    {selectedRequest?.query_type || selectedRequest?.request_type || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1 text-gray-500">کد رهگیری اصلی</h4>
+                  <p className="text-sm font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                    {selectedRequest?.original_request_id || "N/A"}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <h4 className="text-sm font-medium mb-1 text-gray-500">شناسه سیستم (ID)</h4>
+                  <p className="text-sm font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                    {selectedRequest?.id}
+                  </p>
+                </div>
+              </div>
+
+              {/* Request Content */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">محتوای درخواست (Query Params)</h4>
+                <div className="rounded-md bg-gray-950 p-4 overflow-auto">
+                  <pre className="text-xs text-gray-50 font-mono">
+                    {JSON.stringify(selectedRequest?.content || selectedRequest?.query_params || {}, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Response/Result */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">نتیجه / پاسخ</h4>
+                {selectedRequest?.error ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>خطا در پردازش</AlertTitle>
+                    <AlertDescription>{selectedRequest.error}</AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="rounded-md bg-gray-950 p-4 overflow-auto max-h-[300px]">
+                    <pre className="text-xs text-green-400 font-mono">
+                      {JSON.stringify(selectedRequest?.result || {}, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from typing import List, Optional
 from datetime import datetime
 
-from models.request import Request
+from models.incoming_request import IncomingRequest
+from models.user import User
 from models.schemas import RequestStats
 
 async def get_requests(
@@ -12,36 +13,82 @@ async def get_requests(
     user_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
-) -> List[Request]:
-    query = select(Request)
+) -> List[IncomingRequest]:
+    query = select(IncomingRequest, User.username).outerjoin(User, IncomingRequest.user_id == User.id)
     if status:
-        query = query.where(Request.status == status)
+        query = query.where(IncomingRequest.status == status)
     if user_id:
-        query = query.where(Request.user_id == user_id)
-    query = query.order_by(Request.created_at.desc()).offset(skip).limit(limit)
+        query = query.where(IncomingRequest.user_id == user_id)
+    query = query.order_by(desc(IncomingRequest.created_at)).offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    rows = result.all()
+    
+    # Manually convert to dicts to avoid Pydantic serialization issues with SQLAlchemy 2.0 objects
+    results = []
+    for row in rows:
+        r = row[0] # IncomingRequest object
+        username = row[1] # username string
+        item = {
+            "id": r.id,
+            "original_request_id": r.original_request_id,
+            "user_id": r.user_id,
+            "username": username, # Add username
+            "status": r.status,
+            "query_type": r.query_type,
+            "query_params": r.query_params,
+            "content": r.query_params, # Alias for frontend
+            "error": r.error_message,   # Alias for frontend
+            "created_at": r.created_at,
+            "updated_at": r.updated_at or r.created_at, # Fallback
+            "progress": 0.0,
+            "processing_time": 0.0,
+            "result": r.result.result_data if r.result else None
+        }
+        results.append(item)
+    return results
 
 async def get_requests_count(
     db: AsyncSession,
     status: Optional[str] = None,
     user_id: Optional[str] = None
 ) -> int:
-    query = select(func.count()).select_from(Request)
+    query = select(func.count()).select_from(IncomingRequest)
     if status:
-        query = query.where(Request.status == status)
+        query = query.where(IncomingRequest.status == status)
     if user_id:
-        query = query.where(Request.user_id == user_id)
+        query = query.where(IncomingRequest.user_id == user_id)
     result = await db.execute(query)
     return result.scalar() or 0
 
 async def get_request(
     db: AsyncSession, 
-    request_id: int
-) -> Optional[Request]:
-    query = select(Request).where(Request.id == request_id)
+    request_id: str
+) -> Optional[dict]:
+    query = select(IncomingRequest, User.username).outerjoin(User, IncomingRequest.user_id == User.id).where(IncomingRequest.id == request_id)
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    row = result.first()
+    if not row:
+        return None
+        
+    r = row[0]
+    username = row[1]
+    
+    return {
+        "id": r.id,
+        "original_request_id": r.original_request_id,
+        "user_id": r.user_id,
+        "username": username,
+        "status": r.status,
+        "query_type": r.query_type,
+        "query_params": r.query_params,
+        "content": r.query_params,
+        "error": r.error_message,
+        "created_at": r.created_at,
+        "updated_at": r.updated_at or r.created_at,
+        "progress": 0.0,
+        "processing_time": 0.0,
+        "result": r.result.result_data if r.result else None
+    }
 
 async def get_request_stats(
     db: AsyncSession,
@@ -49,8 +96,8 @@ async def get_request_stats(
     end_date: datetime
 ) -> RequestStats:
     # Base query for total count
-    total_query = select(func.count()).select_from(Request).where(
-        Request.created_at.between(start_date, end_date)
+    total_query = select(func.count()).select_from(IncomingRequest).where(
+        IncomingRequest.created_at.between(start_date, end_date)
     )
     result = await db.execute(total_query)
     total = result.scalar() or 0
@@ -58,20 +105,12 @@ async def get_request_stats(
     # Status-specific counts
     status_counts = {}
     for status_type in ["pending", "processing", "completed", "failed"]:
-        query = select(func.count()).select_from(Request).where(
-            Request.created_at.between(start_date, end_date),
-            Request.status == status_type
+        query = select(func.count()).select_from(IncomingRequest).where(
+            IncomingRequest.created_at.between(start_date, end_date),
+            IncomingRequest.status == status_type
         )
         result = await db.execute(query)
         status_counts[status_type] = result.scalar() or 0
-
-    # Average processing time
-    avg_query = select(func.avg(Request.processing_time)).select_from(Request).where(
-        Request.status.in_(["completed", "failed"]),
-        Request.created_at.between(start_date, end_date)
-    )
-    result = await db.execute(avg_query)
-    avg_time = float(result.scalar() or 0.0)
 
     return RequestStats(
         total=total,
@@ -79,5 +118,5 @@ async def get_request_stats(
         processing=status_counts["processing"],
         completed=status_counts["completed"],
         failed=status_counts["failed"],
-        avg_processing_time=avg_time
+        avg_processing_time=0.0 # IncomingRequest might not have this populated yet
     )

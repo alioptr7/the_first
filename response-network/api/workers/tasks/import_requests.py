@@ -5,13 +5,14 @@ from datetime import datetime
 import json
 from pathlib import Path
 import hashlib
+import uuid
 
 from celery import shared_task
 from sqlalchemy.orm import Session
 
 from core.config import settings
 from core.dependencies import get_db_sync
-from models.request import Request as RequestModel
+from models.incoming_request import IncomingRequest as RequestModel
 
 IMPORT_PATH = Path(settings.IMPORT_DIR) / "requests"
 
@@ -67,21 +68,22 @@ def import_requests_from_request_network(self):
                             req_data = json.loads(line)
                             request_id = req_data.get("id")
                             
-                            # Check if request already exists (by id)
+                            # Check if request already exists (by original_request_id)
                             existing = db.query(RequestModel).filter(
-                                RequestModel.id == request_id
+                                RequestModel.original_request_id == request_id
                             ).first()
 
                             if not existing:
                                 # Create new request
                                 new_request = RequestModel(
-                                    id=request_id,
+                                    original_request_id=request_id,
                                     user_id=req_data.get("user_id"),
                                     query_type=req_data.get("query_type"),
                                     query_params=req_data.get("query_params", {}),
                                     priority=req_data.get("priority", 5),
                                     status="pending",
-                                    created_at=datetime.fromisoformat(req_data.get("created_at")) if req_data.get("created_at") else datetime.utcnow()
+                                    # created_at is handled by TimestampMixin, imported_at by default
+                                    import_batch_id=uuid.UUID(req_data.get("batch_id")) if req_data.get("batch_id") else None
                                 )
                                 db.add(new_request)
                                 imported_count += 1

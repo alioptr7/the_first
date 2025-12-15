@@ -72,7 +72,7 @@ async def submit_request(
         user_id=current_user.id,
         name=request_data.name,
         query_type=request_type,
-        query_params=request_data.request.fieldRequest.model_dump(),
+        query_params=request_data.request.fieldRequest,
         priority=current_user.priority,  # Inherit priority from user profile
         status=request_data.reqState,
     )

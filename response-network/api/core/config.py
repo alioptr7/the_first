@@ -58,4 +58,10 @@ class Settings(BaseSettings):
         return f"postgresql+asyncpg://{self.RESPONSE_DB_USER}:{self.RESPONSE_DB_PASSWORD}@{self.RESPONSE_DB_HOST}:{self.RESPONSE_DB_PORT}/{self.RESPONSE_DB_NAME}"
 
 
+    model_config = SettingsConfigDict(
+        env_file=[".env", "/app/.env"],
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
 settings = Settings()

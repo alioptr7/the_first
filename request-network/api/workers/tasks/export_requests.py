@@ -10,8 +10,25 @@ from celery import shared_task
 from sqlalchemy.orm import Session
 
 from core.config import settings
-from core.dependencies import get_db_sync
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from models.request import Request as RequestModel
+from models.user import User  # Register User model for relationship
+from models.response import Response # Register Response model
+
+# Setup sync database connection for Celery
+sync_engine = create_engine(
+    str(settings.DATABASE_URL).replace('postgresql+asyncpg', 'postgresql'),
+    pool_pre_ping=True
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
+def get_db_sync():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 EXPORT_PATH = Path(settings.EXPORT_DIR) / "requests"
 

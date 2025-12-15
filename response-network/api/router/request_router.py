@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from core.dependencies import get_db
 from models.schemas import (
     Request, RequestCreate, RequestUpdate, RequestStats,
-    PaginatedResponse
+    PaginatedResponse, RequestPaginatedResponse
 )
 from models.user import User
 from auth.dependencies import get_current_user
@@ -14,7 +14,7 @@ from crud import requests as request_service
 
 router = APIRouter(tags=["requests"])
 
-@router.get("/requests", response_model=PaginatedResponse)
+@router.get("/requests", response_model=RequestPaginatedResponse)
 async def list_requests(
     status: Optional[str] = Query(None, enum=['pending', 'processing', 'completed', 'failed']),
     user_id: Optional[str] = Query(None, description="Filter requests by user ID"),
@@ -53,8 +53,8 @@ async def list_requests(
         user_id=user_id
     )
     
-    return PaginatedResponse(
-        items=requests,
+    return RequestPaginatedResponse(
+        requests=requests,
         total=total,
         page=page,
         size=size
@@ -79,7 +79,7 @@ async def get_request_stats(
 
 @router.get("/requests/{request_id}", response_model=Request)
 async def get_request(
-    request_id: int,
+    request_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

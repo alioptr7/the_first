@@ -38,6 +38,27 @@ async def list_users(
         limit=limit
     )
 
+@router.post("", response_model=User)
+async def create_user(
+    user_in: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    """
+    Create a new user.
+    Only admins can create new users.
+    """
+    return await user_service.create_user(db, user_in)
+
+@router.post("/force-create", response_model=User)
+async def force_create_user(
+    user_in: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin_user)
+):
+    return await user_service.create_user(db, user_in)
+
+
 @router.get("/me", response_model=dict)
 async def get_current_user_info(
     db: AsyncSession = Depends(get_db),
@@ -169,18 +190,6 @@ async def revoke_request_type_access(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
-
-@router.post("", response_model=User)
-async def create_user(
-    user_in: UserCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_admin_user)
-):
-    """
-    Create a new user.
-    Only admins can create new users.
-    """
-    return await user_service.create_user(db, user_in)
 
 @router.put("/{user_id}", response_model=User)
 async def update_user(

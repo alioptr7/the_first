@@ -34,10 +34,15 @@ from workers.tasks.export_results import export_completed_results
 from workers.tasks.settings_exporter import export_settings_to_request_network
 from workers.tasks.cache_maintenance import cleanup_old_cache, cleanup_redis_cache
 from workers.tasks.system_monitoring import system_health_check
+from workers.tasks.execute_query import execute_pending_queries
 
 # Celery Beat schedule for the Response Network
-# NOTE: Users are NOT exported automatically - they are synced manually from Response Network to Request Network
 celery_app.conf.beat_schedule = {
+    # Export users to request-network every 5 minutes
+    "export-users-every-5min": {
+        "task": "workers.tasks.users_exporter.export_users_to_request_network",
+        "schedule": 300.0,  # هر 300 ثانیه (5 دقیقه)
+    },
     # Import requests from request-network every 30 seconds (polling)
     "import-requests-from-request-network": {
         "task": "workers.tasks.import_requests.import_requests_from_request_network",
@@ -63,4 +68,9 @@ celery_app.conf.beat_schedule = {
     #     "task": "workers.tasks.system_monitoring.system_health_check",
     #     "schedule": 300.0,  # هر 300 ثانیه (5 دقیقه)
     # },
+    # Execute pending queries every 10 seconds
+    "execute-pending-queries": {
+        "task": "workers.tasks.execute_query.execute_pending_queries",
+        "schedule": 10.0,
+    }
 }

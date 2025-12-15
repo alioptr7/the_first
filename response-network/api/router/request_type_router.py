@@ -87,6 +87,24 @@ async def configure_request_type_params(
         delete(RequestTypeParameter)
         .where(RequestTypeParameter.request_type_id == request_type_id)
     )
+    
+    # Add new parameters
+    for param in data.parameters:
+        db_param = RequestTypeParameter(
+            **param.model_dump(),
+            request_type_id=request_type_id
+        )
+        db.add(db_param)
+        
+    await db.commit()
+    
+    # Re-fetch with parameters loaded
+    query = select(RequestType).options(selectinload(RequestType.parameters)).where(RequestType.id == request_type_id)
+    result = await db.execute(query)
+    db_obj = result.scalar_one()
+    
+    return db_obj
+
 
 # Step 3: Configure Elasticsearch query
 @router.put("/{request_type_id}/query", response_model=RequestTypeRead)
@@ -100,8 +118,11 @@ async def configure_request_type_query(
     Step 3: Configure the Elasticsearch query template.
     Only admin users can configure request types.
     """
-    # Get request type
-    db_obj = await db.get(RequestType, request_type_id)
+    # Get request type with parameters loaded
+    query = select(RequestType).options(selectinload(RequestType.parameters)).where(RequestType.id == request_type_id)
+    result = await db.execute(query)
+    db_obj = result.scalar_one_or_none()
+    
     if not db_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -124,10 +145,6 @@ async def grant_access_to_users(
     current_user: User = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Grant access to multiple users for this request type.
-    Only admin users can grant access.
-    """
     """
     Grant access to multiple users for this request type.
     Only admin users can grant access.
@@ -238,7 +255,7 @@ async def list_request_types(
     if not include_inactive:
         query = query.where(RequestType.is_active == True)
     
-    query = query.offset(skip).limit(limit)
+    query = query.order_by(RequestType.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -250,7 +267,10 @@ async def get_request_type(
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific request type by ID."""
-    db_obj = await db.get(RequestType, request_type_id)
+    query = select(RequestType).options(selectinload(RequestType.parameters)).where(RequestType.id == request_type_id)
+    result = await db.execute(query)
+    db_obj = result.scalar_one_or_none()
+    
     if not db_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -260,58 +280,6 @@ async def get_request_type(
 
 
 @router.delete("/{request_type_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_request_type(
-    request_type_id: UUID,
-    current_user: User = Depends(get_current_admin_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """Soft delete a request type by setting is_active=False (admin only)."""
-    db_obj = await db.get(RequestType, request_type_id)
-    if not db_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Request type with ID {request_type_id} not found"
-        )
-    
-    db_obj.is_active = False
-    await db.commit()
-    return None
-    """Update a request type (admin only)."""
-    # Get existing request type
-    query = select(RequestType).options(
-        selectinload(RequestType.parameters)
-    ).filter(RequestType.id == request_type_id)
-    
-    result = await session.execute(query)
-    request_type = result.scalar_one_or_none()
-    
-    if not request_type:
-        raise HTTPException(status_code=404, detail="Request type not found")
-    
-    # Update basic fields
-    update_dict = update_data.model_dump(exclude_unset=True)
-    for key, value in update_dict.items():
-        if key != "parameters":  # Handle parameters separately
-            setattr(request_type, key, value)
-    
-    # Update parameters if provided
-    if "parameters" in update_dict:
-        # Delete existing parameters
-        for param in request_type.parameters:
-            await session.delete(param)
-        
-        # Create new parameters
-        for param_data in update_data.parameters:
-            db_param = RequestTypeParameter(**param_data.model_dump(), request_type=request_type)
-            session.add(db_param)
-    
-    await session.commit()
-    await session.refresh(request_type)
-    
-    return request_type
-
-
-@router.delete("/{request_type_id}", status_code=204)
 async def delete_request_type(
     request_type_id: UUID,
     current_user: User = Depends(get_current_admin_user),

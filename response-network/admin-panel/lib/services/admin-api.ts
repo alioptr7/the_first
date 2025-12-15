@@ -83,12 +83,18 @@ export interface CacheStats {
 
 export interface Request {
   id: string;
+  original_request_id?: string;
   user_id: string;
-  request_type: string;
+  username?: string;
+  request_type?: string; // mapped from query_type
+  query_type?: string;
   status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   updated_at: string;
-  result?: string;
+  query_params?: Record<string, unknown>;
+  content?: Record<string, unknown>;
+  result?: Record<string, unknown> | null;
+  error?: string | null;
 }
 
 export interface RequestType {

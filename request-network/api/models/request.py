@@ -5,9 +5,9 @@ from sqlalchemy import String, Integer, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from shared.database.base import BaseModel
+from shared.database.base import BaseModel, TimestampMixin
 
-class Request(BaseModel):
+class Request(BaseModel, TimestampMixin):
     """
     Represents a user's request submitted to the system.
     """
