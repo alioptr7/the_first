@@ -86,6 +86,32 @@ export default function RequestsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleRetry = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!confirm("آیا مطمئن هستید که می‌خواهید مجدداً تلاش کنید؟")) return;
+
+      await requestService.retryRequest(id);
+      handleRefresh(); // Reload list
+    } catch {
+      alert("خطا در ارسال درخواست تلاش مجدد");
+    }
+  };
+
+  const handleRetryAll = async () => {
+    try {
+      if (!confirm("آیا مطمئن هستید که می‌خواهید همه درخواست‌های ناموفق را مجدداً تلاش کنید؟")) return;
+
+      setState((prev) => ({ ...prev, loading: true }));
+      const result = await requestService.retryAllFailed();
+      alert(result.message);
+      handleRefresh();
+    } catch {
+      setState((prev) => ({ ...prev, loading: false }));
+      alert("خطا در تلاش مجدد همه درخواست‌ها");
+    }
+  };
+
   const handleRefresh = async () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
@@ -168,6 +194,18 @@ export default function RequestsPage() {
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
+            {state.requests.some(r => r.status === 'failed') && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRetryAll}
+                disabled={state.loading}
+                className="ml-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                تلاش مجدد همه
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -343,6 +381,17 @@ export default function RequestsPage() {
                               <Eye className="h-4 w-4 ml-1" />
                               مشاهده
                             </Button>
+                            {request.status === 'failed' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mr-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={(e) => handleRetry(request.id, e)}
+                              >
+                                <RefreshCw className="h-4 w-4 ml-1" />
+                                تلاش مجدد
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))

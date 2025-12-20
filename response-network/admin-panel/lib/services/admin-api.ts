@@ -292,6 +292,16 @@ export const requestService = {
     return response.data.requests || [];
   },
 
+  async retryRequest(id: string): Promise<any> {
+    const response = await api.post(`/api/v1/requests/${id}/retry`);
+    return response.data;
+  },
+
+  async retryAllFailed(): Promise<any> {
+    const response = await api.post("/api/v1/requests/retry-all");
+    return response.data;
+  },
+
   async getRequestById(id: string): Promise<Request> {
     const response = await api.get(`/api/v1/requests/${id}`);
     return response.data;

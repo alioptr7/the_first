@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.dependencies import get_db_sync
 from models.request import Request as RequestModel
+from models.user import User
+from models.response import Response
 
 logger = logging.getLogger(__name__)
 IMPORT_PATH = Path(settings.IMPORT_DIR) / "results"
@@ -74,9 +76,19 @@ def import_results_from_response_network(self):
                             ).first()
 
                             if request:
-                                # Update request with result
+                                # Create Response object
+                                response_data = result_data.get("result_data", {})
+                                response_obj = Response(
+                                    request_id=request.id,
+                                    result_data=response_data,
+                                    result_count=response_data.get("count", 0),
+                                    execution_time_ms=result_data.get("took", 0),
+                                    received_at=datetime.utcnow()
+                                )
+                                db.add(response_obj)
+
+                                # Update request status
                                 request.status = "completed"
-                                request.result_data = result_data.get("result_data")
                                 request.result_received_at = datetime.utcnow()
                                 
                                 # Invalidate cache for this request (async)

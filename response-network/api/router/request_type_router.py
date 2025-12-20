@@ -9,6 +9,7 @@ from models.request_type import RequestType
 from models.request_type_parameter import RequestTypeParameter
 from models.user import User
 from models.request_access import UserRequestAccess
+from models.profile_type_request_access import ProfileTypeRequestAccess
 from schemas.request_type import (
     RequestTypeCreateInitial,
     RequestTypeConfigureParams, 
@@ -18,6 +19,10 @@ from schemas.request_type import (
 from schemas.request_access import (
     UserRequestAccessRead,
     BulkUserRequestAccessCreate
+)
+from schemas.profile_type_request_access import (
+    ProfileTypeRequestAccessCreate,
+    ProfileTypeRequestAccessRead
 )
 from auth.dependencies import get_current_admin_user
 from core.dependencies import get_db
@@ -207,8 +212,10 @@ async def list_user_access(
     List all users that have access to this request type.
     Only admin users can view access list.
     """
+    """
     result = await db.execute(
         select(UserRequestAccess)
+        .options(selectinload(UserRequestAccess.user))
         .where(UserRequestAccess.request_type_id == request_type_id)
     )
     return result.scalars().all()
@@ -294,5 +301,97 @@ async def delete_request_type(
         )
     
     db_obj.is_active = False
+    await db.commit()
+    return None
+
+
+@router.post("/{request_type_id}/profile-access", response_model=List[ProfileTypeRequestAccessRead])
+async def grant_profile_type_access(
+    request_type_id: UUID,
+    data: ProfileTypeRequestAccessCreate,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Grant access to multiple profile types for this request type.
+    Only admin users can grant access.
+    """
+    # Get request type
+    db_obj = await db.get(RequestType, request_type_id)
+    if not db_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Request type with ID {request_type_id} not found"
+        )
+    
+    # Remove existing access for these profile types
+    await db.execute(
+        delete(ProfileTypeRequestAccess).where(and_(
+            ProfileTypeRequestAccess.request_type_id == request_type_id,
+            ProfileTypeRequestAccess.profile_type_id.in_(data.profile_type_ids)
+        ))
+    )
+    
+    # Create new access records
+    access_records = []
+    for pt_id in data.profile_type_ids:
+        access = ProfileTypeRequestAccess(
+            profile_type_id=pt_id,
+            request_type_id=request_type_id,
+            max_requests_per_day=data.max_requests_per_day,
+            max_requests_per_month=data.max_requests_per_month,
+            is_active=data.is_active
+        )
+        db.add(access)
+        access_records.append(access)
+    
+    await db.commit()
+    for record in access_records:
+        await db.refresh(record)
+    
+    return access_records
+
+
+@router.get("/{request_type_id}/profile-access", response_model=List[ProfileTypeRequestAccessRead])
+async def list_profile_type_access(
+    request_type_id: UUID,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all profile types that have access to this request type.
+    Only admin users can view access list.
+    """
+    result = await db.execute(
+        select(ProfileTypeRequestAccess)
+        .where(ProfileTypeRequestAccess.request_type_id == request_type_id)
+    )
+    return result.scalars().all()
+
+
+@router.delete("/{request_type_id}/profile-access/{profile_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_profile_type_access(
+    request_type_id: UUID,
+    profile_type_id: str,
+    current_user: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Revoke a profile type's access to this request type.
+    Only admin users can revoke access.
+    """
+    result = await db.execute(
+        delete(ProfileTypeRequestAccess).where(and_(
+            ProfileTypeRequestAccess.request_type_id == request_type_id,
+            ProfileTypeRequestAccess.profile_type_id == profile_type_id
+        ))
+    )
+    
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No access found for profile type {profile_type_id} on request type {request_type_id}"
+        )
+    
     await db.commit()
     return None

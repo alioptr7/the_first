@@ -37,6 +37,7 @@ class RequestPublic(BaseModel):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    name: str | None = None
     query_type: str
     query_params: dict
     status: str

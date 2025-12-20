@@ -123,8 +123,11 @@ export function RequestAccessDialog({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             console.error("Error granting access:", err);
+            const detail = err.response?.data?.detail;
             setError(
-                err.response?.data?.detail || "خطا در اعطای دسترسی."
+                typeof detail === 'string'
+                    ? detail
+                    : JSON.stringify(detail) || "خطا در اعطای دسترسی."
             );
         }
     };
@@ -142,8 +145,11 @@ export function RequestAccessDialog({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             console.error("Error revoking access:", err);
+            const detail = err.response?.data?.detail;
             setError(
-                err.response?.data?.detail || "خطا در لغو دسترسی."
+                typeof detail === 'string'
+                    ? detail
+                    : JSON.stringify(detail) || "خطا در لغو دسترسی."
             );
         }
     };

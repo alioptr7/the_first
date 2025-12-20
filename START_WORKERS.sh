@@ -1,50 +1,38 @@
 #!/bin/bash
-# راهنما برای شروع workers برای هر دو شبکه
+# Startup script for Request and Response Network Workers
+# Usage: ./START_WORKERS.sh
 
-# مقدار دهی متغیرهای محیطی
-export PYTHONPATH="/workspaces/the_first/request-network/api:/workspaces/the_first"
+# Detect Project Root
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+echo "🚀 Starting Workers from: $PROJECT_ROOT"
 
-echo "==================================="
-echo "REQUEST NETWORK - BEAT (Terminal 1)"
-echo "==================================="
-echo ""
-echo "کپی کن و در Terminal 1 اجرا کن:"
-echo ""
-echo 'cd /workspaces/the_first/request-network/api && PYTHONPATH=/workspaces/the_first/request-network/api:/workspaces/the_first celery -A workers.celery_app beat --loglevel=info'
-echo ""
-echo ""
+# Create log directory
+mkdir -p /tmp/worker_logs
 
-echo "==================================="
-echo "REQUEST NETWORK - WORKER (Terminal 2)"
-echo "==================================="
-echo ""
-echo "کپی کن و در Terminal 2 اجرا کن:"
-echo ""
-echo 'cd /workspaces/the_first/request-network/api && PYTHONPATH=/workspaces/the_first/request-network/api:/workspaces/the_first celery -A workers.celery_app worker --loglevel=info --concurrency=2'
-echo ""
-echo ""
+# Function to start a worker
+start_worker() {
+    local name=$1
+    local dir=$2
+    local app=$3
+    local logfile="/tmp/worker_logs/${name}.log"
 
-echo "==================================="
-echo "RESPONSE NETWORK - BEAT (Terminal 3)"
-echo "==================================="
-echo ""
-echo "کپی کن و در Terminal 3 اجرا کن:"
-echo ""
-echo 'cd /workspaces/the_first/response-network/api && PYTHONPATH=/workspaces/the_first/response-network/api:/workspaces/the_first celery -A workers.celery_app beat --loglevel=info'
-echo ""
-echo ""
+    echo "Starting $name..."
+    cd "$PROJECT_ROOT/$dir" || exit
+    
+    # Use standard python execution
+    nohup python3 -m celery -A $app worker --beat --loglevel=info > "$logfile" 2>&1 &
+    
+    echo "✅ $name started! (PID: $!) | Logs: $logfile"
+}
 
-echo "==================================="
-echo "RESPONSE NETWORK - WORKER (Terminal 4)"
-echo "==================================="
-echo ""
-echo "کپی کن و در Terminal 4 اجرا کن:"
-echo ""
-echo 'cd /workspaces/the_first/response-network/api && PYTHONPATH=/workspaces/the_first/response-network/api:/workspaces/the_first celery -A workers.celery_app worker --loglevel=info --concurrency=4'
-echo ""
+# Start Request Network Worker
+start_worker "request-network" "request-network/api" "workers.celery_app"
 
-echo "==================================="
-echo "Shared Export/Import Directory"
-echo "==================================="
-echo "📁 Exports: /workspaces/the_first/exports"
-echo "📁 Imports: /workspaces/the_first/imports"
+# Start Response Network Worker
+start_worker "response-network" "response-network/api" "workers.celery_app"
+
+echo ""
+echo "=============================================="
+echo "🎉 All Systems Go!"
+echo "Use 'tail -f /tmp/worker_logs/*.log' to monitor."
+echo "=============================================="

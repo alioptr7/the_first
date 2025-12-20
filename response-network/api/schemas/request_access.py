@@ -14,6 +14,10 @@ class UserRequestAccessCreate(UserRequestAccessBase):
     request_type_id: UUID
 
 
+class UserRequestAccessInput(UserRequestAccessBase):
+    request_type_id: UUID
+
+
 class BulkUserRequestAccessCreate(BaseModel):
     user_ids: List[UUID]
     max_requests_per_hour: int = Field(100, ge=1)
@@ -25,12 +29,24 @@ class UserRequestAccessUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class UserBriefRead(BaseModel):
+    id: UUID
+    username: str
+    email: str
+    full_name: Optional[str] = None
+    profile_type: str
+
+    class Config:
+        from_attributes = True
+
+
 class UserRequestAccessRead(UserRequestAccessBase):
     id: UUID
     user_id: UUID
     request_type_id: UUID
     created_at: datetime
     updated_at: datetime
+    user: Optional[UserBriefRead] = None
 
     class Config:
         from_attributes = True

@@ -12,7 +12,7 @@ from models.request_type import RequestType
 from models.request_access import UserRequestAccess
 from auth.dependencies import get_current_admin_user, get_current_user
 from crud import users as user_service
-from schemas.request_access import UserRequestAccessCreate, UserRequestAccessRead
+from schemas.request_access import UserRequestAccessCreate, UserRequestAccessRead, UserRequestAccessInput
 from workers.celery_app import celery_app
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -82,7 +82,7 @@ async def get_user(
 @router.post("/{user_id}/request-access", response_model=List[UserRequestAccessRead])
 async def grant_request_type_access(
     user_id: UUID,
-    request_types: List[UserRequestAccessCreate],
+    request_types: List[UserRequestAccessInput],
     current_user: UserModel = Depends(get_current_admin_user),
     session: AsyncSession = Depends(get_db)
 ):

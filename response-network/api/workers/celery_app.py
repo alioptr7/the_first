@@ -43,15 +43,15 @@ celery_app.conf.beat_schedule = {
         "task": "workers.tasks.users_exporter.export_users_to_request_network",
         "schedule": 300.0,  # هر 300 ثانیه (5 دقیقه)
     },
-    # Import requests from request-network every 30 seconds (polling)
+    # Import requests from request-network every 10 seconds (polling)
     "import-requests-from-request-network": {
         "task": "workers.tasks.import_requests.import_requests_from_request_network",
-        "schedule": 30.0,  # هر 30 ثانیه
+        "schedule": 10.0,  # هر 10 ثانیه
     },
-    # Export results to request-network every 120 seconds
+    # Export results to request-network every 10 seconds
     "export-results-to-request-network": {
         "task": "workers.tasks.export_results.export_completed_results",
-        "schedule": 120.0,  # هر 120 ثانیه
+        "schedule": 10.0,  # هر 10 ثانیه
     },
     # Export settings to request-network every 60 seconds
     "export-settings-every-minute": {

@@ -11,7 +11,7 @@ class UserBase(BaseModel):
 
 
 class User(UserBase):
-    id: UUID
+    id: UUID | str
     profile_type: str
     rate_limit_per_minute: int
     rate_limit_per_hour: int

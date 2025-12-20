@@ -19,27 +19,27 @@ celery_app.conf.update(
     beat_scheduler="celery.beat:PersistentScheduler",
     beat_schedule={
         # EXPORTERS (to Response Network)
-        # Export pending requests every 120 seconds (2 minutes)
-        "export-pending-requests-every-120s": {
+        # Export pending requests every 10 seconds
+        "export-pending-requests-every-10s": {
             "task": "workers.tasks.export_requests.export_pending_requests",
-            "schedule": 120.0,
+            "schedule": 10.0,
         },
         
         # IMPORTERS (from Response Network)
-        # Import settings from response network every 60 seconds
-        "import-settings-every-60s": {
+        # Import settings from response network every 10 seconds
+        "import-settings-every-10s": {
             "task": "workers.tasks.settings_importer.import_settings_from_response_network",
-            "schedule": 60.0,
+            "schedule": 10.0,
         },
         # Import users from response network every 60 seconds (only if changed)
         "import-users-every-60s": {
             "task": "workers.tasks.users_importer.import_users_from_response_network",
             "schedule": 60.0,
         },
-        # Import results from response network every 120 seconds
-        "import-results-every-120s": {
+        # Import results from response network every 10 seconds
+        "import-results-every-10s": {
             "task": "workers.tasks.results_importer.import_results_from_response_network",
-            "schedule": 120.0,
+            "schedule": 10.0,
         },
     },
 )

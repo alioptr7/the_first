@@ -21,6 +21,17 @@ services:
     volumes:
       - redis_request_data:/data
 
+  flower-request:
+    image: mher/flower
+    container_name: request_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis-request:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5556:5555"
+    depends_on:
+      - redis-request
+
 volumes:
   postgres_request_data:
   redis_request_data:

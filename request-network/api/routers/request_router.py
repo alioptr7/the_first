@@ -74,12 +74,17 @@ async def submit_request(
         query_type=request_type,
         query_params=request_data.request.fieldRequest,
         priority=current_user.priority,  # Inherit priority from user profile
-        status=request_data.reqState,
+        status=request_data.reqState.lower(),
     )
     
     db.add(new_request)
     await db.commit()
-    await db.refresh(new_request)
+    await db.commit()
+    
+    # Reload request with eager loading for response to avoid MissingGreenlet error
+    query = select(Request).options(selectinload(Request.response)).where(Request.id == new_request.id)
+    result = await db.execute(query)
+    new_request = result.scalar_one()
 
     return new_request
 
@@ -99,6 +104,7 @@ async def get_user_requests(
         select(Request)
         .where(Request.user_id == current_user.id)
         .order_by(Request.created_at.desc())
+        .options(selectinload(Request.response))
         .offset(skip)
         .limit(limit)
     )

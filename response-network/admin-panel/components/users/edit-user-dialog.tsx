@@ -32,12 +32,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { userService, type User } from "@/lib/services/admin-api";
+import { userService, profileTypeService } from "@/lib/services/admin-api";
+import type { User, ProfileType } from "@/lib/services/admin-api";
 
 const editUserSchema = z.object({
     email: z.string().email("ایمیل معتبر وارد کنید").optional(),
     full_name: z.string().min(1, "نام کامل الزامی است").optional(),
-    profile_type: z.enum(["admin", "user", "viewer"]).optional(),
+    profile_type: z.string().min(1, "نوع پروفایل الزامی است").optional(),
     daily_request_limit: z.number().min(1).optional(),
     monthly_request_limit: z.number().min(1).optional(),
     is_active: z.boolean().optional(),
@@ -59,6 +60,8 @@ export function EditUserDialog({
     user,
 }: EditUserDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [profileTypes, setProfileTypes] = useState<ProfileType[]>([]);
+    const [loadingProfileTypes, setLoadingProfileTypes] = useState(false);
 
     const form = useForm<EditUserFormData>({
         resolver: zodResolver(editUserSchema),
@@ -73,12 +76,27 @@ export function EditUserDialog({
     });
 
     useEffect(() => {
+        const fetchProfileTypes = async () => {
+            try {
+                setLoadingProfileTypes(true);
+                const types = await profileTypeService.getProfileTypes();
+                setProfileTypes(types);
+            } catch (error) {
+                console.error("Error fetching profile types:", error);
+            } finally {
+                setLoadingProfileTypes(false);
+            }
+        };
+        fetchProfileTypes();
+    }, []);
+
+    useEffect(() => {
         if (user) {
             form.reset({
                 email: user.email,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 full_name: (user as any).full_name || "",
-                profile_type: (user.role || "user") as "admin" | "user" | "viewer",
+                profile_type: (user.profile_type || user.role || "user"),
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 daily_request_limit: (user as any).daily_request_limit || 1000,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,13 +194,32 @@ export function EditUserDialog({
                                     >
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue />
+                                                <SelectValue placeholder="انتخاب کنید" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="admin">مدیر (Admin)</SelectItem>
-                                            <SelectItem value="user">کاربر (User)</SelectItem>
-                                            <SelectItem value="viewer">بیننده (Viewer)</SelectItem>
+                                            {loadingProfileTypes ? (
+                                                <div className="flex justify-center p-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                </div>
+                                            ) : profileTypes.length > 0 ? (
+                                                profileTypes.map((pt) => {
+                                                    // Ensure we handle the hardcoded types gracefully if they exist in DB or not
+                                                    // or just render what we get.
+                                                    // Prioritize display_name if available.
+                                                    return (
+                                                        <SelectItem key={pt.name} value={pt.name}>
+                                                            {pt.display_name || pt.name}
+                                                        </SelectItem>
+                                                    );
+                                                })
+                                            ) : (
+                                                <>
+                                                    <SelectItem value="admin">مدیر (Admin)</SelectItem>
+                                                    <SelectItem value="user">کاربر (User)</SelectItem>
+                                                    <SelectItem value="viewer">بیننده (Viewer)</SelectItem>
+                                                </>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

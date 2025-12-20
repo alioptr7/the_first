@@ -74,7 +74,8 @@ def execute_pending_queries(self):
                 
                 # Execute Query
                 index_name = request_type.available_indices[0] if request_type.available_indices else "default"
-                es_url = f"{settings.ELASTICSEARCH_URL}/{index_name}/_search"
+                base_url = str(settings.ELASTICSEARCH_URL).rstrip('/')
+                es_url = f"{base_url}/{index_name}/_search"
                 
                 import requests
                 response = requests.post(es_url, json=query_body, timeout=10)
@@ -88,7 +89,7 @@ def execute_pending_queries(self):
                 hits = es_result.get("hits", {}).get("hits", [])
                 result_data = {
                     "count": es_result.get("hits", {}).get("total", {}).get("value", 0),
-                    "flights": [h["_source"] for h in hits], # Flatten source
+                    "results": [h["_source"] for h in hits], # Generic key for all request types
                     "provider": "Elasticsearch"
                 }
 

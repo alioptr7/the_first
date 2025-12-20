@@ -60,6 +60,30 @@ services:
     networks:
       - response_network
 
+  flower:
+    image: mher/flower
+    container_name: response_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6380/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    networks:
+      - response_network
+
+  flower-request:
+    image: mher/flower
+    container_name: request_flower
+    environment:
+      - CELERY_BROKER_URL=redis://172.17.0.1:6381/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5556:5555"
+    networks:
+      - response_network
+
 volumes:
   postgres_data:
   redis_data:

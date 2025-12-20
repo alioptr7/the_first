@@ -11,11 +11,13 @@ from db.session import get_db_session
 from models.user import User
 from pydantic import BaseModel
 
+from uuid import UUID
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: UUID | str
     username: str
     email: str
     full_name: str | None

@@ -232,7 +232,7 @@ async def get_redis_client() -> RedisClient:
     global _redis_client
     if _redis_client is None:
         from core.config import settings
-        _redis_client = RedisClient(settings.REDIS_URL)
+        _redis_client = RedisClient(str(settings.REDIS_URL))
         await _redis_client.connect()
     return _redis_client
 

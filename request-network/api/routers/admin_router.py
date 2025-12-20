@@ -3,6 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, case, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import os
+import json
+from pathlib import Path
+from datetime import datetime
+from core.config import settings
 
 from auth.dependencies import require_admin
 from db.session import get_db_session
@@ -243,5 +248,55 @@ async def get_all_rate_limits(
             "hard_block": f"{config.HARD_BLOCK_THRESHOLD * 100}%",
         },
         "grace_period_duration": "5 minutes",
-        "message": "Grace Period allows soft overflow for 5 minutes before hard block"
     }
+
+@router.get("/sync-status")
+async def get_sync_status(
+    _: Annotated[None, Depends(require_admin)] = None
+):
+    """
+    Get the last synchronization times for various resources.
+    Checks the modification time of import files and metadata files.
+    """
+    status = {}
+    
+    # 1. Users Sync (Uses .processed_users metadata)
+    # Correct path for shared data
+    users_meta_path = Path("/home/docker/the_first/the_first/shared_data/users/.processed_users")
+    if users_meta_path.exists():
+        try:
+            with open(users_meta_path, "r") as f:
+                data = json.load(f)
+                status["users"] = {
+                    "last_sync": data.get("imported_at"),
+                    "count": data.get("imported_count"),
+                    "checksum": data.get("checksum")[:8] if data.get("checksum") else None
+                }
+        except Exception:
+            status["users"] = {"error": "Could not read metadata"}
+    else:
+        status["users"] = {"status": "Never synced"}
+
+    # 2. Settings & Resources Sync (Check latest.json mtime)
+    # Using settings.IMPORT_DIR from config
+    import_base = Path(settings.IMPORT_DIR)
+    
+    # Map friendly names to folder names
+    resources = {
+        "settings": "settings",
+        "request_types": "request_types", 
+        "profile_types": "profile_types"
+    }
+    
+    for key, folder in resources.items():
+        resource_path = import_base / folder / "latest.json"
+        if resource_path.exists():
+            mtime = datetime.fromtimestamp(resource_path.stat().st_mtime)
+            status[key] = {
+                "last_received": mtime.isoformat(),
+                "file_path": str(resource_path)
+            }
+        else:
+            status[key] = {"status": "No data received"}
+
+    return status
