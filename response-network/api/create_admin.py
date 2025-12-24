@@ -8,8 +8,8 @@ from uuid import uuid4
 sys.path.append(str(Path(__file__).parent))
 
 from db.session import async_session
-from models.user import User
-from core.hashing import get_password_hash
+from models import User
+from auth.security import get_password_hash
 from sqlalchemy import select
 
 async def create_admin():
@@ -28,7 +28,7 @@ async def create_admin():
             id=uuid4(),
             username="admin",
             email="admin@example.com",
-            hashed_password=get_password_hash("admin@123456"),
+            hashed_password=get_password_hash("admin123"),
             full_name="System Administrator",
             profile_type="admin",
             is_active=True,

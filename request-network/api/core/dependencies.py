@@ -5,7 +5,7 @@ from core.config import settings
 
 # Sync DB setup for Celery tasks
 sync_engine = create_engine(
-    str(settings.DATABASE_URL).replace('postgresql+asyncpg', 'postgresql'),
+    str(settings.DATABASE_URL).replace('postgresql+asyncpg', 'postgresql+psycopg'),
     pool_pre_ping=True
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)

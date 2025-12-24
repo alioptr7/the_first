@@ -2,7 +2,7 @@ version: "3.3"
 
 services:
   # ------------------- Request Network Services -------------------
-  postgres-request:
+  postgres-request-db:
     image: postgres:15-alpine
     container_name: postgres-request-db
     profiles: ["request", "all"]
@@ -16,7 +16,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-request-data:/var/lib/postgresql/data
+      - postgres-request-db-data:/var/lib/postgresql/data
     networks:
       - app-net
     healthcheck:
@@ -48,7 +48,7 @@ services:
     restart: unless-stopped
 
   # ------------------- Response Network Services ------------------
-  postgres-response:
+  postgres-response-db:
     image: postgres:15-alpine
     container_name: postgres-response-db
     profiles: ["response", "all"]
@@ -62,7 +62,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres-response-data:/var/lib/postgresql/data
+      - postgres-response-db-data:/var/lib/postgresql/data
     networks:
       - app-net
     healthcheck:
@@ -130,21 +130,87 @@ services:
       - "project.service=api"
     environment:
       - PYTHONUNBUFFERED=1
-      - REQUEST_DB_HOST=postgres-request
+      - REQUEST_DB_HOST=postgres-request-db
       - REQUEST_DB_PORT=5432
       - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
       - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
       - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
       - REDIS_URL=redis://redis-request:6379/0
+      - SHARED_DATA_DIR=/app/shared_data
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    volumes:
+      - ./request-network/api:/app
+      - ./shared_data:/app/shared_data
     networks:
       - app-net
     depends_on:
-      postgres-request:
+      postgres-request-db:
         condition: service_healthy
       redis-request:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-worker-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request-db
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    networks:
+      - app-net
+    volumes:
+      - ./request-network/api:/app
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-beat-request
+    profiles: ["request", "all"]
+    labels:
+      - "project.group=request-network"
+      - "project.service=workers"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request-db
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app beat -l info
+    networks:
+      - app-net
+    volumes:
+      - ./request-network/api:/app
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request-db:
         condition: service_healthy
     restart: unless-stopped
 
@@ -162,20 +228,24 @@ services:
       - "project.service=api"
     environment:
       - PYTHONUNBUFFERED=1
-      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_HOST=postgres-response-db
       - RESPONSE_DB_PORT=5432
       - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
       - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
       - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
       - REDIS_URL=redis://redis-response:6379/0
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
     ports:
-      - "8001:8001"
+      - "8000:8001"
+    volumes:
+      - ./response-network/api:/app
+      - ./shared_data:/app/shared_data
     networks:
       - app-net
     depends_on:
-      postgres-response:
+      postgres-response-db:
         condition: service_healthy
       redis-response:
         condition: service_healthy
@@ -194,20 +264,24 @@ services:
       - "project.service=workers"
     environment:
       - PYTHONUNBUFFERED=1
-      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_HOST=postgres-response-db
       - RESPONSE_DB_PORT=5432
       - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
       - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
       - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
       - REDIS_URL=redis://redis-response:6379/0
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
     command: celery -A workers.celery_app worker -l info --concurrency=2
     networks:
       - app-net
+    volumes:
+      - ./response-network/api:/app
+      - ./shared_data:/app/shared_data
     depends_on:
       redis-response:
         condition: service_healthy
-      postgres-response:
+      postgres-response-db:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
@@ -224,20 +298,24 @@ services:
       - "project.service=workers"
     environment:
       - PYTHONUNBUFFERED=1
-      - RESPONSE_DB_HOST=postgres-response
+      - RESPONSE_DB_HOST=postgres-response-db
       - RESPONSE_DB_PORT=5432
       - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
       - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
       - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
       - REDIS_URL=redis://redis-response:6379/0
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
     command: celery -A workers.celery_app beat -l info
     networks:
       - app-net
+    volumes:
+      - ./response-network/api:/app
+      - ./shared_data:/app/shared_data
     depends_on:
       redis-response:
         condition: service_healthy
-      postgres-response:
+      postgres-response-db:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
@@ -248,13 +326,15 @@ services:
     build:
       context: response-network/admin-panel
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://192.168.214.139:8000
     container_name: admin-panel
     profiles: ["response", "all"]
     labels:
       - "project.group=response-network"
       - "project.service=frontend"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - NEXT_PUBLIC_API_URL=http://192.168.214.139:8000
       - NODE_ENV=development
     ports:
       - "3000:3000"
@@ -265,8 +345,8 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres-request-data: {}
-  postgres-response-data: {}
+  postgres-request-db-data: {}
+  postgres-response-db-data: {}
   redis-request-data: {}
   redis-response-data: {}
   elasticsearch-data: {}

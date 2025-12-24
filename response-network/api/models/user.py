@@ -45,6 +45,7 @@ class User(Base, TimestampMixin):
     profile_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Relationships
     requests: Mapped[list["Request"]] = relationship("Request", back_populates="user", cascade="all, delete-orphan")

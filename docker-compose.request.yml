@@ -1,0 +1,147 @@
+version: "3.8"
+
+services:
+  # ------------------- Request Network Database -------------------
+  postgres-request-db:
+    image: postgres:15-alpine
+    container_name: postgres-request-db
+    environment:
+      - POSTGRES_USER=${REQUEST_DB_USER:-user}
+      - POSTGRES_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - POSTGRES_DB=${REQUEST_DB_NAME:-request_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-request-db-data:/var/lib/postgresql/data
+    networks:
+      - request-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${REQUEST_DB_USER:-user}", "-d", "${REQUEST_DB_NAME:-request_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ------------------- Request Network Cache -------------------
+  redis-request:
+    image: redis:7-alpine
+    container_name: redis-request
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-request-data:/data
+    networks:
+      - request-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ------------------- Request Network API -------------------
+  api-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: api-request
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Note: using service names for internal networking
+      - REQUEST_DB_HOST=postgres-request-db
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+      # Using host-mounted ./request-data/exports and ./request-data/imports
+      # Mapped to internal /app/exports and /app/imports
+      # We keep the SHARED_DATA_DIR env for backward compatibility if needed, but point it to something sensible
+      - SHARED_DATA_DIR=/app/shared_data
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./request-network/api:/app
+      # Map Host request-data/imports to Container /app/imports
+      - ./request-data/imports:/app/imports
+      - ./request-data/exports:/app/exports
+      # Also keep shared_data mapping for legacy scripts if any
+      - ./shared_data:/app/shared_data
+    networks:
+      - request-net
+    depends_on:
+      postgres-request-db:
+        condition: service_healthy
+      redis-request:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Request Network Workers -------------------
+  celery-worker-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-worker-request
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request-db
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    networks:
+      - request-net
+    volumes:
+      - ./request-network/api:/app
+      - ./request-data/imports:/app/imports
+      - ./request-data/exports:/app/exports
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat-request:
+    build:
+      context: .
+      dockerfile: Dockerfile.request-network
+    container_name: celery-beat-request
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REQUEST_DB_HOST=postgres-request-db
+      - REQUEST_DB_PORT=5432
+      - REQUEST_DB_USER=${REQUEST_DB_USER:-user}
+      - REQUEST_DB_PASSWORD=${REQUEST_DB_PASSWORD:-password}
+      - REQUEST_DB_NAME=${REQUEST_DB_NAME:-request_db}
+      - REDIS_URL=redis://redis-request:6379/0
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app beat -l info
+    networks:
+      - request-net
+    volumes:
+      - ./request-network/api:/app
+      - ./request-data/imports:/app/imports
+      - ./request-data/exports:/app/exports
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-request:
+        condition: service_healthy
+      postgres-request-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+
+volumes:
+  postgres-request-db-data: {}
+  redis-request-data: {}
+
+networks:
+  request-net:
+    driver: bridge

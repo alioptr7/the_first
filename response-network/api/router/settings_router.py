@@ -100,6 +100,43 @@ async def get_current_export_settings(
     }
 
 
+@router.put("/system/export_config", response_model=SettingsSchema, dependencies=[Depends(get_current_admin_user)])
+async def update_export_config(
+    config: dict,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Update export configuration (Local/FTP).
+    Example config: {"type": "local", "path": "/exports"} or {"type": "ftp", "host": "...", ...}
+    """
+    key = "export_config"
+    result = await db.execute(select(SettingsModel).where(SettingsModel.key == key))
+    db_setting = result.scalar_one_or_none()
+    
+    if db_setting:
+        db_setting.value = config
+    else:
+        db_setting = SettingsModel(
+            key=key,
+            value=config,
+            description="Dynamic Export Configuration (Local/FTP)",
+            is_public=False
+        )
+        db.add(db_setting)
+        
+    await db.commit()
+    await db.refresh(db_setting)
+    return db_setting
+
+
+@router.post("/system/trigger_export", dependencies=[Depends(get_current_admin_user)])
+async def trigger_export():
+    """Trigger user export task manually."""
+    from workers.tasks.users_exporter import export_users_to_request_network
+    export_users_to_request_network.delay()
+    return {"message": "Export task triggered"}
+
+
 # System Settings Endpoints (Admin Only)
 @router.post("/", response_model=SettingsSchema, dependencies=[Depends(get_current_admin_user)])
 async def create_setting(

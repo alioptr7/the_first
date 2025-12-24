@@ -212,7 +212,6 @@ async def list_user_access(
     List all users that have access to this request type.
     Only admin users can view access list.
     """
-    """
     result = await db.execute(
         select(UserRequestAccess)
         .options(selectinload(UserRequestAccess.user))

@@ -28,9 +28,14 @@ try:
 except ImportError:
     pass
 
-# Use shared_data directory directly
-IMPORT_PATH = Path("/home/docker/the_first/the_first/shared_data/users")
-PROCESSED_FILE = IMPORT_PATH / ".processed_users"
+# Import ImportStorageService
+from services.import_storage import ImportStorageService
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Use shared_data directory from environment
+SHARED_DATA_DIR = Path(os.getenv("SHARED_DATA_DIR", "/app/shared_data"))
 
 
 @shared_task(bind=True, max_retries=3)
@@ -47,52 +52,12 @@ def import_users_from_response_network(self):
     This is a DELTA sync - only updates when files change.
     """
     try:
-        IMPORT_PATH.mkdir(parents=True, exist_ok=True)
-        
-        latest_file = IMPORT_PATH / "latest.json"
-        
-        # If no file exists, nothing to import
-        if not latest_file.exists():
-            return {
-                "status": "no_file",
-                "message": "No latest.json found in imports/users/",
-                "imported_at": datetime.utcnow().isoformat()
-            }
-
-        # Calculate current file checksum
-        with open(latest_file, "rb") as f:
-            current_checksum = hashlib.sha256(f.read()).hexdigest()
-
-        # Read previous checksum
-        previous_checksum = None
-        if PROCESSED_FILE.exists():
-            try:
-                with open(PROCESSED_FILE, "r", encoding="utf-8") as f:
-                    previous_data = json.load(f)
-                    previous_checksum = previous_data.get("checksum")
-            except Exception:
-                pass
-
-        # If checksums match, no changes
-        if previous_checksum and current_checksum == previous_checksum:
-            return {
-                "status": "no_changes",
-                "message": "Users file has not changed",
-                "imported_at": datetime.utcnow().isoformat()
-            }
-
-        # File has changed or first time, import it
-        with open(latest_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        users_list = data.get("users", [])
-        
         # Build database URL from env
-        db_user = os.getenv("REQUEST_DB_USER", "postgres")
-        db_pass = os.getenv("REQUEST_DB_PASSWORD", "postgres")
-        db_host = os.getenv("REQUEST_DB_HOST", "127.0.0.1")
-        db_port = os.getenv("REQUEST_DB_PORT", "5433")
-        db_name = os.getenv("REQUEST_DB_NAME", "request_network")
+        db_user = os.getenv("REQUEST_DB_USER", "user")
+        db_pass = os.getenv("REQUEST_DB_PASSWORD", "password")
+        db_host = os.getenv("REQUEST_DB_HOST", "postgres-request-db")
+        db_port = os.getenv("REQUEST_DB_PORT", "5432")
+        db_name = os.getenv("REQUEST_DB_NAME", "request_db")
         
         database_url = f"postgresql+psycopg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
         
@@ -100,17 +65,59 @@ def import_users_from_response_network(self):
         engine = create_engine(database_url)
         Session = sessionmaker(bind=engine)
         db = Session()
-
+        
         try:
+            # Determine paths using internal helper or config (for checksum storage)
+            # Note: Checksums are stored locally relative to import path or in a fixed location
+            # For simplicity in this phase, we use a fixed local path for tracking state
+            PROCESSED_FILE = SHARED_DATA_DIR / "users" / ".processed_users"
+            if not PROCESSED_FILE.parent.exists():
+                PROCESSED_FILE.parent.mkdir(parents=True, exist_ok=True)
+                
+            # Use ImportStorageService to get data
+            data = ImportStorageService.read_latest_file(db, "users")
+            
+            if not data:
+                return {
+                    "status": "skipped",
+                    "message": "No data found or import_config missing",
+                    "imported_at": datetime.utcnow().isoformat()
+                }
+
+            # Checksum logic
+            current_checksum = hashlib.sha256(json.dumps(data, sort_keys=True).encode('utf-8')).hexdigest()
+            
+            # Read previous checksum
+            previous_checksum = None
+            if PROCESSED_FILE.exists():
+                try:
+                    with open(PROCESSED_FILE, "r", encoding="utf-8") as f:
+                        previous_data = json.load(f)
+                        previous_checksum = previous_data.get("checksum")
+                except Exception:
+                    pass
+
+            # If checksums match, no changes
+            if previous_checksum and current_checksum == previous_checksum:
+                return {
+                    "status": "no_changes",
+                    "message": "Users file has not changed",
+                    "imported_at": datetime.utcnow().isoformat()
+                }
+
+            users_list = data.get("users", [])
+
             imported_count = 0
             updated_count = 0
 
             for user_data in users_list:
                 user_id = user_data.get("id")
                 
-                # Try to find existing user
+                # Try to find existing user by ID, username or email
                 existing_user = db.query(UserModel).filter(
-                    UserModel.id == user_id
+                    (UserModel.id == user_id) | 
+                    (UserModel.username == user_data.get("username")) | 
+                    (UserModel.email == user_data.get("email"))
                 ).first()
 
                 if existing_user:

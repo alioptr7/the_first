@@ -23,7 +23,7 @@ from core.middleware import RequestContextMiddleware
 from core.rate_limiter import RateLimiter
 from core.exceptions import global_exception_handler
 from db.session import get_db_session
-from routers import auth_router, request_router, admin_router
+from routers import auth_router, request_router, admin_router, settings_router
 from routers import users as users_router  # Import users router
 from shared.logger import get_logger
 
@@ -57,6 +57,7 @@ app.include_router(auth_router.router, prefix=settings.API_V1_STR)
 app.include_router(users_router.router, prefix=settings.API_V1_STR)
 app.include_router(request_router.router, prefix=settings.API_V1_STR)
 app.include_router(admin_router.router, prefix=settings.API_V1_STR)
+app.include_router(settings_router.router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")

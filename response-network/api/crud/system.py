@@ -86,7 +86,7 @@ async def get_system_health(db: AsyncSession, detailed: bool = False) -> SystemH
     # Check Redis
     try:
         # Redis connection string سے براہ راست بنائیں
-        redis_client = await redis.from_url("redis://localhost:6380/0")
+        redis_client = await redis.from_url(str(settings.REDIS_URL))
         await redis_client.ping()
         components["redis"] = "healthy"
         await redis_client.close()

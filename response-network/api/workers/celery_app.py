@@ -35,6 +35,7 @@ from workers.tasks.settings_exporter import export_settings_to_request_network
 from workers.tasks.cache_maintenance import cleanup_old_cache, cleanup_redis_cache
 from workers.tasks.system_monitoring import system_health_check
 from workers.tasks.execute_query import execute_pending_queries
+from workers.tasks.users_exporter import export_users_to_request_network
 
 # Celery Beat schedule for the Response Network
 celery_app.conf.beat_schedule = {

@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 
     # Redis URL (for Celery stats)
-    REDIS_URL: RedisDsn = "redis://localhost:6380/0"
+    REDIS_URL: RedisDsn = "redis://redis-response:6379/0"
     
     # Celery Configuration
-    CELERY_BROKER_URL: str = "redis://localhost:6380/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6380/1"
+    CELERY_BROKER_URL: str = "redis://redis-response:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://redis-response:6379/1"
 
     # Elasticsearch URL for monitoring
     ELASTICSEARCH_URL: AnyHttpUrl = "http://elasticsearch:9200"

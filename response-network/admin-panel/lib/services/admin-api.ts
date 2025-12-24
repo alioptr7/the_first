@@ -72,6 +72,7 @@ export interface SystemStats {
 
 export interface CacheStats {
   keys: number;
+  size?: number; // Optional for backward compatibility
   memory_usage: string;
   keyspace_hits: number;
   keyspace_misses: number;
@@ -435,6 +436,11 @@ export const cacheService = {
   async getCacheKeys(): Promise<string[]> {
     const response = await api.get("/api/v1/monitoring/cache/keys");
     return response.data.keys || [];
+  },
+
+  async optimizeCache(): Promise<void> {
+    // Placeholder for cache optimization - can be implemented later
+    await api.post("/api/v1/monitoring/cache/optimize");
   },
 };
 

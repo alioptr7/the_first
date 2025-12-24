@@ -1,0 +1,192 @@
+version: "3.8"
+
+services:
+  # ------------------- Response Network Database -------------------
+  postgres-response-db:
+    image: postgres:15-alpine
+    container_name: postgres-response-db
+    environment:
+      - POSTGRES_USER=${RESPONSE_DB_USER:-respuser}
+      - POSTGRES_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - POSTGRES_DB=${RESPONSE_DB_NAME:-response_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-response-db-data:/var/lib/postgresql/data
+    networks:
+      - response-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${RESPONSE_DB_USER:-respuser}", "-d", "${RESPONSE_DB_NAME:-response_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ------------------- Response Network Cache -------------------
+  redis-response:
+    image: redis:7-alpine
+    container_name: redis-response
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-response-data:/data
+    networks:
+      - response-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ------------------- Search Engine -------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - response-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ------------------- Response Network API -------------------
+  api-response:
+    build:
+      context: .
+      dockerfile: Dockerfile.response
+    container_name: api-response
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RESPONSE_DB_HOST=postgres-response-db
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./response-network/api:/app
+      - ./response-data/exports:/app/exports
+      - ./response-data/imports:/app/imports
+      - ./shared_data:/app/shared_data
+    networks:
+      - response-net
+    depends_on:
+      postgres-response-db:
+        condition: service_healthy
+      redis-response:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Response Network Workers -------------------
+  celery-worker-response:
+    build:
+      context: .
+      dockerfile: Dockerfile.response
+    container_name: celery-worker-response
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RESPONSE_DB_HOST=postgres-response-db
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app worker -l info --concurrency=2
+    networks:
+      - response-net
+    volumes:
+      - ./response-network/api:/app
+      - ./response-data/exports:/app/exports
+      - ./response-data/imports:/app/imports
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response-db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat-response:
+    build:
+      context: .
+      dockerfile: Dockerfile.response
+    container_name: celery-beat-response
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RESPONSE_DB_HOST=postgres-response-db
+      - RESPONSE_DB_PORT=5432
+      - RESPONSE_DB_USER=${RESPONSE_DB_USER:-respuser}
+      - RESPONSE_DB_PASSWORD=${RESPONSE_DB_PASSWORD:-resppassword123}
+      - RESPONSE_DB_NAME=${RESPONSE_DB_NAME:-response_db}
+      - REDIS_URL=redis://redis-response:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SHARED_DATA_DIR=/app/shared_data
+    command: celery -A workers.celery_app beat -l info
+    networks:
+      - response-net
+    volumes:
+      - ./response-network/api:/app
+      - ./response-data/exports:/app/exports
+      - ./response-data/imports:/app/imports
+      - ./shared_data:/app/shared_data
+    depends_on:
+      redis-response:
+        condition: service_healthy
+      postgres-response-db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------- Admin Panel (Frontend) -------------------
+  admin-panel:
+    build:
+      context: response-network/admin-panel
+      dockerfile: Dockerfile
+      args:
+        # Using Host IP for browser access compatibility
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://192.168.214.139:8000}
+    container_name: admin-panel
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://192.168.214.139:8000}
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    networks:
+      - response-net
+    depends_on:
+      - api-response
+    restart: unless-stopped
+
+volumes:
+  postgres-response-db-data: {}
+  redis-response-data: {}
+  elasticsearch-data: {}
+
+networks:
+  response-net:
+    driver: bridge

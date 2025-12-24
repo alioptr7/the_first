@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import select
 from db.session import async_session
-from models.user import User
+from models import User
 from auth import security
 
 async def check_admin():

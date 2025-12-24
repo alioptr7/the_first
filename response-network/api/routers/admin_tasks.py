@@ -17,8 +17,11 @@ router = APIRouter(
 )
 
 # Redis client
-redis_client = redis.from_url("redis://localhost:6380/0")
-inspect = celery_app.control.inspect()
+from core.config import settings
+redis_client = redis.from_url(str(settings.REDIS_URL))
+
+def get_inspect():
+    return celery_app.control.inspect()
 
 
 async def check_admin(user: User = Depends(get_current_user)):
@@ -45,6 +48,7 @@ async def get_queue_stats(admin: User = Depends(check_admin)):
         queue_length = redis_client.llen("celery")
         
         # tasks فعال
+        inspect = get_inspect()
         active = inspect.active()
         total_active = sum(len(tasks) for tasks in active.values()) if active else 0
         active_workers = len(active) if active else 0
@@ -87,6 +91,7 @@ async def get_workers_stats(admin: User = Depends(check_admin)):
     - **active_tasks**: tasks در حال اجرا در این worker
     """
     try:
+        inspect = get_inspect()
         stats = inspect.stats()
         worker_list = []
         
@@ -235,6 +240,7 @@ async def retry_task(
     """
     try:
         # Inspect برای پیدا کردن task info
+        inspect = get_inspect()
         reserved = inspect.reserved()
         active = inspect.active()
         

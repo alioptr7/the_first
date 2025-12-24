@@ -7,6 +7,11 @@ from .query_result import QueryResult
 from .request_type import RequestType
 from .request_type_parameter import RequestTypeParameter
 from .request_access import UserRequestAccess
+from .profile_type import ProfileType
+from .profile_type_config import ProfileTypeConfig
+from .profile_type_request_access import ProfileTypeRequestAccess
+from .system_log import SystemLog
+from .system_metrics import SystemMetrics
 
 __all__ = [
     "User",
@@ -17,5 +22,10 @@ __all__ = [
     "UserSettings",
     "RequestType",
     "RequestTypeParameter",
-    "UserRequestAccess"
+    "UserRequestAccess",
+    "ProfileType",
+    "ProfileTypeConfig",
+    "ProfileTypeRequestAccess",
+    "SystemLog",
+    "SystemMetrics"
 ]

@@ -9,11 +9,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # --- Database Settings ---
-    DB_USER: str = "requser"
-    DB_PASSWORD: str = "reqpassword123"
-    DB_HOST: str = "postgres-request"
-    DB_PORT: int = 5432
-    DB_NAME: str = "request_network_db"
+    REQUEST_DB_USER: str = "requser"
+    REQUEST_DB_PASSWORD: str = "reqpassword123"
+    REQUEST_DB_HOST: str = "postgres-request-db"
+    REQUEST_DB_PORT: int = 5432
+    REQUEST_DB_NAME: str = "request_network_db"
 
     # Secret key for JWT
     SECRET_KEY: str = "change-this-secret-key"
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     EXPORT_DIR: str = "/app/exports"
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3001"]
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3001", "http://localhost:3000"]
 
     model_config = SettingsConfigDict(
         env_file=[".env", "/app/.env"],
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"postgresql+asyncpg://{self.REQUEST_DB_USER}:{self.REQUEST_DB_PASSWORD}@{self.REQUEST_DB_HOST}:{self.REQUEST_DB_PORT}/{self.REQUEST_DB_NAME}"
 
 
 settings = Settings()

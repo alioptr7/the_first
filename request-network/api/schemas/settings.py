@@ -29,8 +29,8 @@ class SettingsUpdate(SettingsBase):
 
 class Settings(SettingsBase):
     """Schema for reading settings."""
-    id: int
-    created_at: datetime
+    id: str | None = None
+    created_at: datetime | None = None
     updated_at: datetime | None = None
 
     class Config:

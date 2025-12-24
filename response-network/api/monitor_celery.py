@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "api"))
 
 from workers.celery_app import celery_app
+from core.config import settings
 
 print("=" * 60)
 print("🔍 Monitoring Celery Status")
@@ -45,7 +46,7 @@ while True:
         print("\n3️⃣ Queue Status:")
         try:
             import redis
-            r = redis.from_url("redis://localhost:6380/0")
+            r = redis.from_url(str(settings.REDIS_URL))
             queue_length = r.llen("celery")
             print(f"   Queue length: {queue_length}")
         except Exception as e:

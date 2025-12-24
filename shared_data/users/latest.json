@@ -1,10 +1,10 @@
 {
   "users": [
     {
-      "id": "0d697ac8-012d-441a-9bc6-916f0c2013ff",
+      "id": "877bca0b-8468-473d-b1d4-a473ce42a8ab",
       "username": "admin",
       "email": "admin@example.com",
-      "hashed_password": "$2b$12$Qk6fjucjsnenbytzZoO.NOz3p0D6EqSzW.9mG3jjkplS2cBxAuIWm",
+      "hashed_password": "$2b$12$t95T23yitjS3I69mg3v7z./kYNY3iXMac.8CKOCKEWgZBma5Fzfdm",
       "full_name": "System Administrator",
       "profile_type": "admin",
       "is_active": true,
@@ -16,34 +16,15 @@
       "daily_request_limit": 10000,
       "monthly_request_limit": 100000,
       "priority": 5,
-      "created_at": "2025-12-01T06:03:31.621643+00:00",
-      "updated_at": "2025-12-01T12:23:15.964764+00:00"
+      "created_at": "2025-12-22T09:11:31.303620+00:00",
+      "updated_at": "2025-12-22T09:11:31.303620+00:00"
     },
     {
-      "id": "b11dd58f-3cdb-453b-ba2e-568896a7a030",
-      "username": "sales_agent_01",
-      "email": "agent01@example.com",
-      "hashed_password": "$2b$12$bJRox4lD.AzfoHllM6qIUOPxfHK16uZ3O/Nk5f79AUeHoEILoJg6K",
-      "full_name": "Sales Agent One",
-      "profile_type": "user",
-      "is_active": true,
-      "allowed_request_types": [],
-      "blocked_request_types": [],
-      "rate_limit_per_minute": 200,
-      "rate_limit_per_hour": 1000,
-      "rate_limit_per_day": 5000,
-      "daily_request_limit": 100,
-      "monthly_request_limit": 2000,
-      "priority": 5,
-      "created_at": "2025-12-10T06:00:20.374445+00:00",
-      "updated_at": "2025-12-10T06:00:20.374445+00:00"
-    },
-    {
-      "id": "092b70d3-63a7-46db-923f-ed1cebe23427",
-      "username": "shahab",
-      "email": "shahab@example.com",
-      "hashed_password": "$2b$12$6A5z.V03a4ZYx5teK2lRre3E.gG97INdVMtZ0HZ8fNQ1/b9fiGEXm",
-      "full_name": "شهاب",
+      "id": "ab256c2b-6780-4d2a-b3c6-35a04ca098ff",
+      "username": "asqar",
+      "email": "asqar@example.com",
+      "hashed_password": "$2b$12$4Nw7uK8WACHeyMmN7kRqFuD8oOrTZu2uF9.vs5PgWw53/e9Hi0DEq",
+      "full_name": "اصغر اصغری",
       "profile_type": "user",
       "is_active": true,
       "allowed_request_types": [],
@@ -54,10 +35,10 @@
       "daily_request_limit": 1000,
       "monthly_request_limit": 10000,
       "priority": 5,
-      "created_at": "2025-12-03T08:20:08.775763+00:00",
-      "updated_at": "2025-12-17T06:03:51.283738+00:00"
+      "created_at": "2025-12-23T04:29:24.792598+00:00",
+      "updated_at": "2025-12-23T04:29:24.792598+00:00"
     }
   ],
-  "exported_at": "2025-12-20T10:27:17.220245",
-  "total_count": 3
+  "exported_at": "2025-12-23T09:46:21.495446",
+  "total_count": 2
 }

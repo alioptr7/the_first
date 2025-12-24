@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import ftplib
+import io
 
 from celery import shared_task
 from sqlalchemy import create_engine, select
@@ -14,8 +16,11 @@ from sqlalchemy.orm import sessionmaker
 # Load .env file
 load_dotenv()
 
-# Use shared_data directory directly
-EXPORT_DIR = Path("/home/docker/the_first/the_first/shared_data/users")
+# Import Settings model
+from models.settings import Settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import User model
 import sys
@@ -47,6 +52,30 @@ def export_users_to_request_network():
     session = Session()
     
     try:
+        # Fetch Export Configuration
+        result = session.execute(
+            select(Settings).where(Settings.key == "export_config")
+        )
+        config_setting = result.scalar_one_or_none()
+        
+        if not config_setting or not config_setting.value:
+            logger.warning("Skipping user export: 'export_config' not set in settings.")
+            return {"status": "skipped", "reason": "export_config_missing"}
+
+        config = config_setting.value
+        export_type = config.get("type", "local")
+        
+        # Determine Export Path
+        if export_type == "local":
+            export_path = Path(config.get("path", "/app/exports/users"))
+        elif export_type == "ftp":
+            # For phase 10, we will just simulate FTP by using a local temp path currently
+            # Real implementation would use ftplib here based on creds
+            export_path = Path("/tmp/ftp_exports/users") 
+        else:
+             logger.error(f"Unknown export type: {export_type}")
+             return {"status": "error", "reason": f"unknown_type_{export_type}"}
+
         # Get all active users
         result = session.execute(
             select(User).where(User.is_active == True)
@@ -82,20 +111,67 @@ def export_users_to_request_network():
             "total_count": len(users),
         }
         
-        # Ensure export directory exists
-        EXPORT_DIR.mkdir(parents=True, exist_ok=True)
-        
         # Save to latest.json
-        latest_file = EXPORT_DIR / "latest.json"
-        with open(latest_file, 'w', encoding='utf-8') as f:
-            json.dump(export_data, f, indent=2, ensure_ascii=False)
+        latest_file = export_path / "latest.json"
         
-        return {
-            "status": "success",
-            "exported_at": export_data["exported_at"],
-            "total_count": len(users),
-            "file": str(latest_file)
-        }
+        if export_type == "local":
+            # Ensure export directory exists
+            if not export_path.parent.exists():
+                export_path.parent.mkdir(parents=True, exist_ok=True)
+            if not export_path.exists():
+                 export_path.mkdir(parents=True, exist_ok=True)
+                 
+            with open(latest_file, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False)
+            
+            return {
+                "status": "success",
+                "exported_at": export_data["exported_at"],
+                "total_count": len(users),
+                "file": str(latest_file),
+                "config_used": export_type
+            }
+        
+        elif export_type == "ftp":
+            host = config.get("host")
+            user = config.get("user")
+            passwd = config.get("password")
+            remote_path = config.get("path", "/users")
+            
+            if not host:
+                return {"status": "error", "reason": "ftp_host_missing"}
+            
+            try:
+                # Prepare JSON data in memory
+                json_data = json.dumps(export_data, indent=2, ensure_ascii=False).encode('utf-8')
+                bio = io.BytesIO(json_data)
+                
+                with ftplib.FTP(host) as ftp:
+                    ftp.login(user=user, passwd=passwd)
+                    # Try to change to remote path, create if not exist (simple version)
+                    try:
+                        ftp.cwd(remote_path)
+                    except ftplib.error_perm:
+                        # Try to create directories one by one or just assume they exist for now
+                        # FTP doesn't have mkdir -p usually, so we'll just try to mkdir the last part
+                        try:
+                            ftp.mkd(remote_path)
+                            ftp.cwd(remote_path)
+                        except:
+                            pass
+                    
+                    ftp.storbinary(f"STOR latest.json", bio)
+                
+                return {
+                    "status": "success",
+                    "exported_at": export_data["exported_at"],
+                    "total_count": len(users),
+                    "method": "ftp",
+                    "destination": f"ftp://{host}{remote_path}/latest.json"
+                }
+            except Exception as e:
+                logger.error(f"FTP Upload failed: {e}")
+                return {"status": "error", "reason": f"ftp_failed: {str(e)}"}
     finally:
         session.close()
 

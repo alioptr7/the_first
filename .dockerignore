@@ -37,3 +37,8 @@ exports/
 celerybeat-schedule
 shared/
 
+# Ignore export artifacts to avoid permission issues during build context creation
+response-network/api/exports/*.json
+response-network/api/exports/settings/*.json
+request-network/api/imports/*.json
+request-network/api/imports/users/*.json

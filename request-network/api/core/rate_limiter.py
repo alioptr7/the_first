@@ -3,8 +3,9 @@ Rate limiter for user requests
 """
 import redis
 from datetime import datetime, timedelta
-from typing import Tuple
+from typing import Tuple, Optional
 from models.user import User
+from core.config import settings
 
 
 class RateLimiter:
@@ -17,8 +18,10 @@ class RateLimiter:
     - Per day
     """
     
-    def __init__(self, redis_url: str = "redis://localhost:6380/2"):
+    def __init__(self, redis_url: Optional[str] = None):
         """Initialize Redis connection for rate limiting"""
+        if redis_url is None:
+            redis_url = str(settings.REDIS_URL)
         self.redis = redis.from_url(redis_url)
     
     def _get_key(self, user_id: str, period: str) -> str:

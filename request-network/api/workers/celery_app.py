@@ -48,10 +48,7 @@ celery_app.conf.update(
 celery_app.autodiscover_tasks(["workers.tasks"], force=True)
 
 # Import tasks explicitly to ensure they are registered
-try:
-    from workers.tasks import settings_importer  # noqa
-    from workers.tasks import export_requests  # noqa
-    from workers.tasks import users_importer  # noqa
-    from workers.tasks import results_importer  # noqa
-except ImportError:
-    pass
+from workers.tasks import settings_importer  # noqa
+from workers.tasks import export_requests  # noqa
+from workers.tasks import users_importer  # noqa
+from workers.tasks import results_importer  # noqa
